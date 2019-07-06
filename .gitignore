@@ -23,11 +23,9 @@
 *.app
 
 # MSVC files
-#*.vcxproj.*
+.suo
 *.t?log
 GeneratedFiles/
 Debug/
 /Qtfringehead/Qtfringehead/Release/
-#Win32/
-#!glew/lib/Release/Win32/*
-*.VC.VC.opendb
+*.VC.*db
