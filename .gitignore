@@ -23,7 +23,7 @@
 *.app
 
 # MSVC files
-*.vcxproj.*
+#*.vcxproj.*
 *.t?log
 Debug/
 Release/
