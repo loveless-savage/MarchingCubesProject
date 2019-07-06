@@ -5,7 +5,6 @@
 *.slo
 *.lo
 *.o
-*.obj
 
 # Precompiled Headers
 *.gch
@@ -13,20 +12,20 @@
 
 # Compiled Dynamic libraries
 *.so
-*.dylib
-*.dll
 
 # Fortran module files
 *.mod
 *.smod
 
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
 # Executables
 *.exe
 *.out
 *.app
+
+# MSVC files
+*.vcxproj*
+*.t?log
+Debug/
+Release/
+Win32/
+*.VC.VC.opendb
