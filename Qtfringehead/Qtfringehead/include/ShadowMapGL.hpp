@@ -13,6 +13,11 @@
 #include <glm/gtx/transform.hpp>
 #include <iostream>
 
+// ShadowMapGL is a child of OGLFramework, which is a child of QGLWidget
+// QWidget
+// 	└──QGLWidget
+// 	    └──OGLFramework
+// 	        └──ShadowMapGL
 class ShadowMapGL : public OGLF::OGLFramework {
 
 public:
@@ -23,10 +28,11 @@ public:
 
 private:
 
+	// models
 	shared_ptr<OGLF::Model> m_dragon_model, m_cube_model;
-	//shader program
+	// container for the shader program
 	GLuint m_model_program;
-	//view matrix and projective matrix
+	//view matrix (global->camera) and projective matrix (camera->perspective)
 	glm::mat4 m_view, m_proj;
 
 	//pure color model and shader program
@@ -55,37 +61,40 @@ private:
 
 
 protected:
-	//overide function
+	// steal these functions borrowed from the parent classes
 	virtual void OnInit() override;
 	virtual void OnUpdate() override;
 
-	//input: model, model transform matrix, obj's color
+	// render an object using a basic lighting system
 	virtual void renderPureObject(
-		shared_ptr<OGLF::Model>& pc_model,
-		glm::mat4& model_mat,
-		glm::vec3& obj_Color);
-
-	//input: model, model transform matrix, obj's material, phong lighting
-	virtual void renderPhongObject(
-		shared_ptr<OGLF::Model>& phong_model,
-		glm::mat4& model_mat,
-		glm::vec3& obj_Color,
-		glm::vec3& uK,
-		glm::vec3& uSpecularColor,
-		glm::float32 uShininess
+		shared_ptr<OGLF::Model>& pc_model, // model,
+		glm::mat4& model_mat, // model transform matrix,
+		glm::vec3& obj_Color // obj's color
 	);
 
+	// render an object using phong lighting
+	virtual void renderPhongObject(
+		shared_ptr<OGLF::Model>& phong_model, // model,
+		glm::mat4& model_mat, // model transform matrix,
+		glm::vec3 && obj_Color, // obj's material,
+		glm::vec3 && uK,
+		glm::vec3 && uSpecularColor,
+		glm::float32 uShininess // phong lighting
+	);
+
+// TODO
 	//initialize texture map for shadow map
 	void initShadowMapTex(GLuint& tex, uint width, uint height);
-	//input:modes, models' transform matrix ptr, light view projection matr
-	//shadowmap width, height, output:tex
-	//output: texture
+	//input: modes, models' transform matrix ptr, light view projection matr
 	void generateShadowMap(
 		GLuint& tex,
 		const std::vector<shared_ptr<OGLF::Model>>& models,
 		const std::vector<glm::mat4>& model_trans,
 		const glm::mat4& depth_vp,
-		uint width, uint height);
+		uint width, uint height
+	);
+	//shadowmap width, height, output:tex
+	//output: texture
 
 	//key event
 	void keyPressEvent(QKeyEvent *event);

@@ -33,12 +33,16 @@ namespace OGLF
 {
 
 
+	// OGLFramework is a type of widget
 	class OGLFramework : public QGLWidget
 	{
 		Q_OBJECT
 
 	public:
+		// OGLFramework is a main window with normal system frame
 		OGLFramework(QWidget *parent = 0, Qt::WindowFlags flags = 0);
+
+		// return the frame ratio
 		inline float FrameRatio()
 		{
 			return float(this->width()) / float(this->height());
@@ -57,6 +61,7 @@ namespace OGLF
 			{
 				height = 1;
 			}
+			// resize the viewport
 			glViewport(0, 0, width, height);
 		}
 		void timerEvent(QTimerEvent* timer) override;
@@ -73,7 +78,9 @@ namespace OGLF
 		bool rbutton_down_ = false;
 
 		/***model view matrix*************************/
+		// camera's location in world space
 		vec3 m_camera_position;
+		// vector to roll the camera correctly
 		vec3 m_camera_up;
 
 		mat4 m_camera_view;

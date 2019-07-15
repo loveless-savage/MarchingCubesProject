@@ -6,6 +6,9 @@ extern double g_per_time_radio;
 bool anim_on = true;
 bool spot_light_on = true;
 bool direct_light_on = true;
+
+
+// start up the whole thing
 void ShadowMapGL::OnInit() {
 	//load shaders******************************/
 	m_model_program = OGLF::CreateProgram("./shaders/verts.c", "./shaders/frags.c");
@@ -41,18 +44,23 @@ void ShadowMapGL::OnInit() {
 	m_proj = glm::perspective(glm::radians(60.f), FrameRatio(), 0.1f, 100.f);
 }
 
+
+// run every time the scene is tweaked
 void ShadowMapGL::OnUpdate()
 {
+	// black background
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
+	// activate lights and rotate them over time
 	light.pos = glm::vec3(2, 3, 0);
 	light.pos = glm::rotate(float(360 * g_per_time_radio), glm::vec3(0, 1.0, 0)) * vec4(light.pos, 1.0);
 
 	light2.pos = glm::vec3(3, 5, 0);
-	light2.pos = glm::rotate(float(720 * g_per_time_radio), glm::vec3(0, 1.0, 0)) * vec4(light.pos, 1.0);
+	light2.pos = glm::rotate(float(720 * g_per_time_radio), glm::vec3(0, 1.0, 0)) * vec4(light.pos, 1.0); // notice that this light rotates twice as fast
 
 	//Shadow map 1
 	glm::mat4 depthProjectionMatrix = glm::ortho<float>(-10, 10, -10, 10, 0.0, 10);
+	// matrix for transforming world to viewing coordinates
 	glm::mat4 depthViewMatrix = glm::lookAt(light.pos, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 	//glm::mat4 depthModelMatrix = glm::mat4(1.0);
 	depthMVP = depthProjectionMatrix * depthViewMatrix;
@@ -63,6 +71,7 @@ void ShadowMapGL::OnUpdate()
 	//glm::mat4 depthModelMatrix = glm::mat4(1.0);
 	depthMVP2 = depthProjectionMatrix2 * depthViewMatrix2;
 
+// TODO
 	std::vector<shared_ptr<OGLF::Model>> models;
 	std::vector<glm::mat4> model_trans;
 
@@ -106,8 +115,9 @@ void ShadowMapGL::OnUpdate()
 		glm::vec3(1., 1., 0.),
 		glm::vec3(0.3, 0.6, 0.1),
 		glm::vec3(1.0, 1.0, 1.0),
-		6.0);
+		glm::float32(6.0));
 
+/*
 	//draw cube
 	this->renderPhongObject(
 		m_cube_model,
@@ -115,7 +125,7 @@ void ShadowMapGL::OnUpdate()
 		glm::vec3(0.8, 0.8, 0.8),
 		glm::vec3(0.3, 0.6, 0.1),
 		glm::vec3(1.0, 1.0, 1.0),
-		3.0);
+		glm::float32(3.0));
 
 	//draw plane objets
 	glm::mat4 plane_model_mat = glm::translate(glm::vec3(0, -1, 0)) * glm::scale(glm::vec3(0.02));
@@ -125,7 +135,8 @@ void ShadowMapGL::OnUpdate()
 		glm::vec3(1., 1., 1.),
 		glm::vec3(0.3, 0.6, 0.1),
 		glm::vec3(1.0, 1.0, 1.0),
-		3.0);
+		glm::float32(3.0));
+*/
 
 	/**********************************************************************/
 	//render pure color objet
@@ -228,9 +239,9 @@ void ShadowMapGL::initShadowMapTex(GLuint& tex, uint width, uint height) {
 void ShadowMapGL::renderPhongObject(
 	shared_ptr<OGLF::Model>& phong_model,
 	glm::mat4& model_mat,
-	glm::vec3& obj_Color,
-	glm::vec3& uK,
-	glm::vec3& uSpecularColor,
+	glm::vec3 && obj_Color,
+	glm::vec3 && uK,
+	glm::vec3 && uSpecularColor,
 	glm::float32 uShininess
 ) {
 

@@ -11,7 +11,7 @@
 #include <cfloat>
 #include <ctime>
 
-#include <qDebug>
+#include <QDebug>
 
 #include "loadingModel.hpp"
 

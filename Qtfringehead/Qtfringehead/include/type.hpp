@@ -8,15 +8,24 @@ enum class Light_Type {
 	POINT,
 	DIRECTION
 };
+// 3D coordinates class
 struct XYZ { float x, y, z; };
+// color class
 struct RGB { float r, g, b; };
+// combine the previous two
 struct XYZRGB { XYZ pos; RGB color; };
-struct Light {
 
+// light source
+struct Light {
+	// store the type of this source as a Light_Type enum
 	Light_Type light_type;
 	glm::vec3 color;
 	glm::vec3 pos;
+
+	// initialize with empty constructor
 	Light() {}
+
+	// initialize with color, coordinates, and type of source
 	Light(float r, float g, float b,
 		float x, float y, float z,
 		Light_Type in_light_type = Light_Type::DIRECTION) {

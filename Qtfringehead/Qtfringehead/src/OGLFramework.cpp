@@ -30,17 +30,21 @@ using glm::mat4;
 
 const double PI = float(M_PI);
 
+// initialize the class
 OGLFramework::OGLFramework(QWidget *parent, Qt::WindowFlags flags) : QGLWidget(parent)
 {
 	this->setEnabled(true);
 	m_model_trans = glm::mat4(1.0f);
 	m_camera_position = { 0.0f, 0.0f, 8.0f };
 	m_camera_up = glm::vec3(0.0f, 1.0f, 0.0f);
+	// get a matrix ready to shift world to view space
 	m_camera_view = glm::lookAt(glm::vec3(m_camera_position), glm::vec3{ 0, 0, 0 }, m_camera_up);
 	this->setFocusPolicy(Qt::StrongFocus);
 	//set timer interval and start
 	m_timer_id = this->startTimer(0);
 }
+
+// initialize the OpenGL
 void OGLFramework::initializeGL()
 {
 	GLenum err = glewInit();
@@ -50,6 +54,7 @@ void OGLFramework::initializeGL()
 		qDebug() << "glewInit error...................." << glewGetErrorString(err);
 		return;
 	}
+	// fill system frame with OpenGL
 	glViewport(0, 0, this->width(), this->height());
 	this->OnInit();
 
@@ -151,6 +156,7 @@ void OGLFramework::wheelEvent(QWheelEvent *e) {
 	QPoint numDegrees = e->angleDelta() / 8;
 	float degree = numDegrees.y() * WHEEL_ROTATED_PARAMETER;
 	//qDebug() << degree;
+	// scale distance of camera from center based on scrolling
 	m_camera_position += (m_camera_position - vec3(0)) * degree;
 	m_camera_view = glm::lookAt(m_camera_position, glm::vec3(0), m_camera_up);
 

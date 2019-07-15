@@ -1,4 +1,12 @@
 <RCC>
-    <qresource prefix="Qtfringehead">
+    <qresource prefix='/'>
+		<file>shaders/depth_frags.c</file>
+		<file>shaders/depth_verts.c</file>
+		<file>shaders/frags.c</file>
+		<file>shaders/purecolor_frags.c</file>
+		<file>shaders/purecolor_verts.c</file>
+		<file>shaders/render_depth_tex_frags.c</file>
+		<file>shaders/render_depth_tex_verts.c</file>
+		<file>shaders/verts.c</file>
     </qresource>
 </RCC>
