@@ -10,33 +10,28 @@
 //using std::shared_ptr;
 //using std::array;
 
-GLuint OGLF::CreateProgram(string vertexfilename, string fragmentfilename)
-{
+GLuint OGLF::CreateProgram(string vertexfilename, string fragmentfilename) {
 	std::vector<std::tuple<std::string, GLenum>> shaders;
 	shaders.push_back(std::tuple<std::string, GLenum>(vertexfilename, GL_VERTEX_SHADER));
 	shaders.push_back(std::tuple<std::string, GLenum>(fragmentfilename, GL_FRAGMENT_SHADER));
 	return CreateProgram(shaders);
 }
 
-GLuint OGLF::CreateProgram(vector<tuple<string, GLenum>> shadernames)
-{
+GLuint OGLF::CreateProgram(vector<tuple<string, GLenum>> shadernames) {
 	// create program
 	GLuint program = glCreateProgram();
 	vector<GLuint> shaders;
 	// setup shader deletion
-	auto delete_shaders = [](const vector<GLuint>& shaders)
-	{
+	auto delete_shaders = [](const vector<GLuint>& shaders) {
 		for (auto s : shaders) {
 			glDeleteShader(s);
 		}
 	};
 	// setup compile error checker
-	auto check_compile = [](GLint shader, std::string* info)->bool
-	{
+	auto check_compile = [](GLint shader, std::string* info)->bool {
 		GLint success = 0;
 		glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-		if (success == GL_FALSE)
-		{
+		if (success == GL_FALSE) {
 			// get info size
 			GLint logsize = 0;
 			glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logsize);
@@ -52,8 +47,7 @@ GLuint OGLF::CreateProgram(vector<tuple<string, GLenum>> shadernames)
 	};
 
 	// read each shader
-	for (auto shaderinfo : shadernames)
-	{
+	for (auto shaderinfo : shadernames) {
 		string sname = get<0>(shaderinfo);
 		GLenum type = get<1>(shaderinfo);
 		// open file stream

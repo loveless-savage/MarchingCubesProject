@@ -16,7 +16,6 @@ void ShadowMapGL::OnInit() {
 	//shader for render depth texture from light's view point
 	m_render_depth_tex_program = OGLF::CreateProgram("./shaders/render_depth_tex_verts.c", "./shaders/render_depth_tex_frags.c");
 
-
 	// load objects***************************/
 	m_dragon_model = OGLF::LoadModel("./data/dragon.obj");
 	m_cube_model = OGLF::LoadModel("./data/cube.obj");
@@ -28,7 +27,7 @@ void ShadowMapGL::OnInit() {
 	//load lights*****************************/
 	//light and light view matrix
 	light = Light(1, 1, 1, 2, 3, 0, Light_Type::DIRECTION);
-	light2 = Light(1, 0.2, 0.2, 3, 5, 0, Light_Type::SPOT);
+	light2 = Light(1, 0, 0, 3, 5, 0, Light_Type::SPOT);
 
 	// initial opengl states
 	glEnable(GL_DEPTH_TEST);
@@ -36,6 +35,7 @@ void ShadowMapGL::OnInit() {
 	//initialize framebuffer
 	glGenFramebuffers(1, &m_framebuffer);
 
+	// set up an interface between shadow generation and primary rendering
 	glEnable(GL_TEXTURE_2D);
 	this->initShadowMapTex(m_depth_tex, SHADOWMAP_RES_WIDTH, SHADOWMAP_RES_HEIGHT);
 	this->initShadowMapTex(m_depth_tex2, SHADOWMAP_RES_WIDTH, SHADOWMAP_RES_HEIGHT);
@@ -46,27 +46,36 @@ void ShadowMapGL::OnInit() {
 
 
 // run every time the scene is tweaked
-void ShadowMapGL::OnUpdate()
-{
+void ShadowMapGL::OnUpdate() {
 	// black background
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClearColor(0.0f, 0.0f, 0.2f, 1.0f);
 
 	// activate lights and rotate them over time
 	light.pos = glm::vec3(2, 3, 0);
-	light.pos = glm::rotate(float(360 * g_per_time_radio), glm::vec3(0, 1.0, 0)) * vec4(light.pos, 1.0);
+	light.pos = glm::vec3(
+		glm::rotate(float(360 * g_per_time_radio), glm::vec3(0, 1.0, 0))
+		* vec4(light.pos, 1.0)
+	);
 
 	light2.pos = glm::vec3(3, 5, 0);
-	light2.pos = glm::rotate(float(720 * g_per_time_radio), glm::vec3(0, 1.0, 0)) * vec4(light.pos, 1.0); // notice that this light rotates twice as fast
+	light2.pos = glm::vec3(
+		glm::rotate(float(720 * g_per_time_radio), glm::vec3(0, 1.0, 0))
+		* vec4(light.pos, 1.0)
+	); // notice that this light rotates twice as fast
 
-	//Shadow map 1
+	// Shadow map 1: orthographic box projection
+	// glm::ortho<T>(left, right, bottom, top, front, back)
 	glm::mat4 depthProjectionMatrix = glm::ortho<float>(-10, 10, -10, 10, 0.0, 10);
 	// matrix for transforming world to viewing coordinates
+	// glm::lookAt(camera, target, up)
 	glm::mat4 depthViewMatrix = glm::lookAt(light.pos, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-	//glm::mat4 depthModelMatrix = glm::mat4(1.0);
+	// this matrix figures out the first shadow
 	depthMVP = depthProjectionMatrix * depthViewMatrix;
 
-	//shadow map 2
+	// shadow map 2
+	// glm::perspective<T>(fov_y, aspect_ratio, front, back)
 	glm::mat4 depthProjectionMatrix2 = glm::perspective<float>(glm::radians(40.0f), 1, 1.0, 20);
+	// glm::lookAt(camera, target, up)
 	glm::mat4 depthViewMatrix2 = glm::lookAt(light2.pos, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 	//glm::mat4 depthModelMatrix = glm::mat4(1.0);
 	depthMVP2 = depthProjectionMatrix2 * depthViewMatrix2;
@@ -75,6 +84,7 @@ void ShadowMapGL::OnUpdate()
 	std::vector<shared_ptr<OGLF::Model>> models;
 	std::vector<glm::mat4> model_trans;
 
+	// pop models onto the model "stack"
 	models.push_back(m_dragon_model);
 	models.push_back(m_cube_model);
 	//dragon  	
@@ -83,6 +93,7 @@ void ShadowMapGL::OnUpdate()
 	glm::mat4 cube_model_mat = glm::rotate(float(90 * g_per_time_radio), glm::vec3(0, 1.0, 0))
 		* glm::translate(vec3(2.0, 0.0, 0.0));
 
+	// pop model matrices onto the model matrix "stack"
 	model_trans.push_back(dragon_model_mat);
 	model_trans.push_back(cube_model_mat);
 
@@ -104,7 +115,9 @@ void ShadowMapGL::OnUpdate()
 	//render phong objets
 	/**********************************************************************/
 
+	// redirect OpenGL actions to the default (screen) framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	// reset dimensions to fit viewport
 	glViewport(0, 0, this->width(), this->height());
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -117,15 +130,14 @@ void ShadowMapGL::OnUpdate()
 		glm::vec3(1.0, 1.0, 1.0),
 		glm::float32(6.0));
 
-/*
 	//draw cube
 	this->renderPhongObject(
 		m_cube_model,
 		cube_model_mat,
-		glm::vec3(0.8, 0.8, 0.8),
+		glm::vec3(1., 0., 0.),
 		glm::vec3(0.3, 0.6, 0.1),
 		glm::vec3(1.0, 1.0, 1.0),
-		glm::float32(3.0));
+		glm::float32(6.0));
 
 	//draw plane objets
 	glm::mat4 plane_model_mat = glm::translate(glm::vec3(0, -1, 0)) * glm::scale(glm::vec3(0.02));
@@ -136,10 +148,9 @@ void ShadowMapGL::OnUpdate()
 		glm::vec3(0.3, 0.6, 0.1),
 		glm::vec3(1.0, 1.0, 1.0),
 		glm::float32(3.0));
-*/
 
 	/**********************************************************************/
-	//render pure color objet
+	//render pure color objects- lights
 	/**********************************************************************/
 	if (spot_light_on) {
 		glm::mat4 lights_model_mat = glm::translate(light.pos) * glm::scale(vec3(0.1));
@@ -163,23 +174,26 @@ void ShadowMapGL::renderPureObject(
 
 	glm::mat4 model_view_proj = m_proj * m_camera_view * model_mat;
 
-	//draw pure color objects
+	// link 4x4 transformation matrices
 	glUniformMatrix4fv(
 		glGetUniformLocation(m_pc_model_program, "model_view_proj"),
 		1, false, glm::value_ptr(model_view_proj));
 	glUniformMatrix4fv(
 		glGetUniformLocation(m_pc_model_program, "model"),
 		1, false, glm::value_ptr(model_mat));
-
+	// link array of 3 floats to transmit color
 	glUniform3fv(
 		glGetUniformLocation(m_pc_model_program, "uColor"),
 		1, glm::value_ptr(obj_Color));
 
+	//draw pure color objects
 	pc_model->Draw(m_pc_model_program);
 
 	glUseProgram(0);
 }
-//generate shadow map
+
+
+//generate shadow map // TODO
 void ShadowMapGL::generateShadowMap(
 	GLuint& tex,
 	const std::vector<shared_ptr<OGLF::Model>>& models,
@@ -187,9 +201,7 @@ void ShadowMapGL::generateShadowMap(
 	const glm::mat4& depth_vp,
 	uint width, uint height) {
 
-	/**********************************************************************/
-	//render depth texture
-	/**********************************************************************/
+	// render depth texture
 	glUseProgram(m_render_depth_tex_program);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, m_framebuffer);
@@ -222,9 +234,8 @@ void ShadowMapGL::generateShadowMap(
 	}
 }
 
-//initialize texture map for shadow map
+//initialize texture map for shadow map // TODO
 void ShadowMapGL::initShadowMapTex(GLuint& tex, uint width, uint height) {
-
 	//initialize tex
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
@@ -235,6 +246,9 @@ void ShadowMapGL::initShadowMapTex(GLuint& tex, uint width, uint height) {
 	glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE, GL_LUMINANCE);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 }
+
+
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
 //render phong lighting
 void ShadowMapGL::renderPhongObject(
 	shared_ptr<OGLF::Model>& phong_model,
@@ -245,9 +259,6 @@ void ShadowMapGL::renderPhongObject(
 	glm::float32 uShininess
 ) {
 
-	/**********************************************************************/
-	//render objects
-	/**********************************************************************/
 	glUseProgram(m_model_program);
 
 	glm::mat4 model_view_proj = m_proj * m_camera_view  * model_mat;
@@ -306,23 +317,23 @@ void ShadowMapGL::renderPhongObject(
 	glUniform1f(glGetUniformLocation(m_model_program, "uShininess"),
 		uShininess);
 
-
+	// Texture unit 0 is for shadowmap.
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, m_depth_tex);
-	glUniform1i(glGetUniformLocation(m_model_program, "shadowMap"), 0); // Texture unit 0 is for shadowmap.
+	glUniform1i(glGetUniformLocation(m_model_program, "shadowMap"), 0);
 
+	// Texture unit 1 is for shadowmap2.
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, m_depth_tex2);
-	glUniform1i(glGetUniformLocation(m_model_program, "shadowMap2"), 1); // Texture unit 0 is for shadowmap.
+	glUniform1i(glGetUniformLocation(m_model_program, "shadowMap2"), 1);
 
 	phong_model->Draw(m_model_program);
 	glUseProgram(0);
 }
 
 void ShadowMapGL::keyPressEvent(QKeyEvent *event) {
-
+	// freeze/unfreeze render on press 'q'
 	if (event->key() == Qt::Key_Q) {
-
 		anim_on = !anim_on;
 		if (!anim_on) {
 			this->killTimer(m_timer_id);
@@ -331,8 +342,8 @@ void ShadowMapGL::keyPressEvent(QKeyEvent *event) {
 			m_timer_id = this->startTimer(0);
 		}
 	}
+	// turn white light on/off with 'w'
 	if (event->key() == Qt::Key_W) {
-
 		spot_light_on = !spot_light_on;
 		if (!spot_light_on) {
 			light.color = glm::vec3(0.0);
@@ -341,14 +352,14 @@ void ShadowMapGL::keyPressEvent(QKeyEvent *event) {
 			light.color = glm::vec3(1.0);
 		}
 	}
+	// turn red light on/off with 'e'
 	if (event->key() == Qt::Key_E) {
-
 		direct_light_on = !direct_light_on;
 		if (!direct_light_on) {
 			light2.color = glm::vec3(0.0);
 		}
 		else {
-			light2.color = glm::vec3(1.0, 0.2, 0.2);
+			light2.color = glm::vec3(1.0, 0.0, 0.0);
 		}
 	}
 
