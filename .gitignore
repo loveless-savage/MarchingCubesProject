@@ -29,3 +29,7 @@ GeneratedFiles/
 Debug/
 /Qtfringehead/Qtfringehead/Release/
 *.VC.*db
+
+# linux env setup
+/Qtfringehead/Qtfringehead/test
+qq

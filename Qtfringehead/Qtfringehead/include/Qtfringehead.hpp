@@ -28,6 +28,10 @@ public:
 	Qtfringehead(QWidget *parent = Q_NULLPTR);
 
 public:
+	// ShadowMapGL is a child of OGLFramework, which is a child of QGLWidget
+	// QGLWidget
+	//  └──OGLF::OGLFramework
+	//            └──ShadowMapGL
 	ShadowMapGL* Fw;
 
 private:

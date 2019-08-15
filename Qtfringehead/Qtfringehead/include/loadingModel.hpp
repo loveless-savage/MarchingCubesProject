@@ -50,8 +50,11 @@ namespace OGLF
 	public:
 		Mesh(const vector<Vertex>& vertices,
 			const vector<GLuint>& indices,
-			const vector<Texture>& textures)
-			:vertices_(vertices), indices_(indices), textures_(textures)
+			const vector<Texture>& textures
+		):
+			vertices_(vertices),
+			indices_(indices),
+			textures_(textures)
 		{
 			SetupMesh();
 		}
@@ -82,6 +85,8 @@ namespace OGLF
 
 		void LoadModel(string path);
 		void ProcNode(aiNode* node, const aiScene* scene);
+
+		// actually loads the numbers from the file- implements assimp
 		Mesh ProcMesh(aiMesh* mesh, const aiScene* scene);
 		vector<Texture> LoadMaterialTextures(aiMaterial* mat, aiTextureType type, string type_name);
 		// load texture from file

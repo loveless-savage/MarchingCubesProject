@@ -16,8 +16,8 @@
 // ShadowMapGL is a child of OGLFramework, which is a child of QGLWidget
 // QWidget
 // 	└──QGLWidget
-// 	    └──OGLFramework
-// 	        └──ShadowMapGL
+// 	    └──OGLF::OGLFramework
+// 	              └──ShadowMapGL
 class ShadowMapGL : public OGLF::OGLFramework {
 
 public:
@@ -32,7 +32,7 @@ private:
 	shared_ptr<OGLF::Model> m_dragon_model, m_cube_model;
 	// container for the shader program
 	GLuint m_model_program;
-	//view matrix (global->camera) and projective matrix (camera->perspective)
+	//view (global->camera) and projective (camera->perspective) matrices
 	glm::mat4 m_view, m_proj;
 
 	//pure color model and shader program
@@ -85,7 +85,7 @@ protected:
 // TODO
 	//initialize texture map for shadow map
 	void initShadowMapTex(GLuint& tex, uint width, uint height);
-	//input: modes, models' transform matrix ptr, light view projection matr
+	//input: modes, models, transform matrix ptr, light view projection matr
 	void generateShadowMap(
 		GLuint& tex,
 		const std::vector<shared_ptr<OGLF::Model>>& models,
