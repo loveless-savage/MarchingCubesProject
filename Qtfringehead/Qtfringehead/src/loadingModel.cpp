@@ -20,115 +20,15 @@ using namespace OGLF;
 
 extern string suffix_;
 
-std::default_random_engine generator;
-std::uniform_real_distribution<double> distribution(0, 1);
+//std::default_random_engine generator;
+//std::uniform_real_distribution<double> distribution(0, 1);
 
-map<string, Texture> Model::loaded_mesh_;
 
- // TODO
-GLuint Model::LoadTexture(string filename) {
-	GLuint textureID;
-	glGenTextures(1, &textureID);
-
-	// load image
-	FREE_IMAGE_FORMAT formato = FreeImage_GetFileType(filename.c_str(), 0);//Automatocally detects the format(from over 20 formats!)
-	FIBITMAP* imagen = FreeImage_Load(formato, filename.c_str());
-
-	FIBITMAP* temp = imagen;
-	imagen = FreeImage_ConvertTo32Bits(imagen);
-	FreeImage_Unload(temp);
-
-	int w = FreeImage_GetWidth(imagen);
-	int h = FreeImage_GetHeight(imagen);
-	//cout<<"The size of the image is: "<<textureFile<<" es "<<w<<"*"<<h<<endl; //Some debugging code
-
-	char* pixeles = (char*)FreeImage_GetBits(imagen);
-	//FreeImage loads in BGR format, so you need to swap some bytes(Or use GL_BGR).
-
-	// Assign texture to ID
-	glBindTexture(GL_TEXTURE_2D, textureID);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixeles);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	// Parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	FreeImage_Unload(imagen);
-	return textureID;
+// create a model from an external scope with a filename
+shared_ptr<Model> OGLF::LoadModel(string filename) {
+	shared_ptr<Model> model = std::make_shared<Model>(filename);
+	return model;
 }
-
-void Mesh::Draw(GLuint program) {
-	// setup materials
-	GLuint diffuse_count = 1;
-	GLuint specular_count = 1;
-	for (GLuint i = 0; i < textures_.size(); i++)
-	{
-		glActiveTexture(GL_TEXTURE0 + i);
-		stringstream ss;
-		string num;
-		string type = textures_[i].type_;
-		if (type == "texture_diffuse")
-			ss << diffuse_count++;
-		else if (type == "texture_specular")
-			ss << specular_count++;
-		num = ss.str();
-		string mattype = "material." + type + num;
-		GLuint loc = glGetUniformLocation(program, mattype.c_str());
-		glUniform1i(loc, i);
-		glBindTexture(GL_TEXTURE_2D, textures_[i].id_);
-	}
-	glActiveTexture(GL_TEXTURE0);
-
-	// draw
-	glBindVertexArray(vao_);
-	//glDrawArrays(GL_TRIANGLES, 0, indices_.size());
-	glDrawElements(GL_TRIANGLES, indices_.size(), GL_UNSIGNED_INT, 0);
-	glBindVertexArray(0);
-}
-
-
-void Mesh::SetupMesh() {
-
-// set up VBO: all the vertices of the model in an array
-	// make a buffer and store its ID in vbo_
-	glGenBuffers(1, &vbo_);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-	// copy the vertex coordinates into the buffer we just bound
-	glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(Vertex), &vertices_[0], GL_STATIC_DRAW);
-
-	// Vertex array object setup
-	glGenVertexArrays(1, &vao_);
-	glBindVertexArray(vao_);
-
-	// Elememt buffer object setup- stores indices to connect vertices
-	glGenBuffers(1, &ebo_);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
-	// copy indices into our freshly baked element buffer
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_.size() * sizeof(GLuint), &indices_[0], GL_STATIC_DRAW);
-
-// set up buffers available to the vertex shader
-// glVertexAttribPointer( layout_location_#, buffer_element_size, type, normalized, stride, array_buffer_offset );
-	// position
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)0);
-	// normal
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, normal_));
-	// texture coordination
-	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, texcoords_));
-
-}
-
-// draw all meshes inside a model
-void Model::Draw(GLuint program) {
-	for (auto& mesh : meshes_)
-		mesh.Draw(program);
-}
-
 // loads the models using assimp and processes them into our own defined formats
 void Model::LoadModel(string path) {
 	Assimp::Importer importer;
@@ -141,7 +41,7 @@ void Model::LoadModel(string path) {
 	// do all the node transformations, starting at the root node
 	ProcNode(scene->mRootNode, scene);
 }
-
+// process nodes recursively, as extracted from model file
 void Model::ProcNode(aiNode* node, const aiScene* scene) {
 	// convert all aiMeshes into our own Mesh objects
 	for (GLuint i = 0; i < node->mNumMeshes; i++) {
@@ -163,8 +63,7 @@ Mesh Model::ProcMesh(aiMesh* mesh, const aiScene* scene) {
 	vector<Texture> textures;
 
 	// process vertices
-	for (GLuint i = 0; i < mesh->mNumVertices; i++)
-	{
+	for (GLuint i = 0; i < mesh->mNumVertices; i++) {
 		Vertex v;
 		// mv points to the current vertex
 		const auto& mv = mesh->mVertices[i];
@@ -210,23 +109,22 @@ Mesh Model::ProcMesh(aiMesh* mesh, const aiScene* scene) {
 
 	return Mesh(vertices, indices, textures);
 }
-
+// used to find texture by its path
+map<string, Texture> Model::loaded_mesh_;
+// load textures from model file; used in procMesh()
 vector<Texture> Model::LoadMaterialTextures(aiMaterial* mat, aiTextureType type, string typeName) {
 	vector<Texture> textures;
-	for (GLuint i = 0; i < mat->GetTextureCount(type); i++)
-	{
+	for (GLuint i = 0; i < mat->GetTextureCount(type); i++) {
 		aiString str;
 		mat->GetTexture(type, i, &str);
 
 		// find in recoreds
 		string texfile = str.C_Str();
 		auto texiter = loaded_mesh_.find(texfile);
-		if (texiter != loaded_mesh_.end())
-		{
+		if (texiter != loaded_mesh_.end()) {
 			// used loaded texture
 			textures.push_back(texiter->second);
-		}
-		else {
+		}else{
 			Texture texture;
 			texture.id_ = LoadTexture(dir_ + '/' + str.C_Str());
 			texture.type_ = typeName;
@@ -237,13 +135,137 @@ vector<Texture> Model::LoadMaterialTextures(aiMaterial* mat, aiTextureType type,
 	}
 	return textures;
 }
+// given texture location from model file, load from texture file
+GLuint Model::LoadTexture(string filename) {
+	GLuint textureID;
+	glGenTextures(1, &textureID);
 
+	// load image
+	FREE_IMAGE_FORMAT formato = FreeImage_GetFileType(filename.c_str(), 0);//Automatocally detects the format(from over 20 formats!)
+	FIBITMAP* imagen = FreeImage_Load(formato, filename.c_str());
 
+	FIBITMAP* temp = imagen;
+	imagen = FreeImage_ConvertTo32Bits(imagen);
+	FreeImage_Unload(temp);
 
-shared_ptr<Model> OGLF::LoadModel(string filename) {
-	shared_ptr<Model> model = std::make_shared<Model>(filename);
-	return model;
+	int w = FreeImage_GetWidth(imagen);
+	int h = FreeImage_GetHeight(imagen);
+	//cout<<"The size of the image is: "<<textureFile<<" es "<<w<<"*"<<h<<endl; //Some debugging code
+
+	char* pixeles = (char*)FreeImage_GetBits(imagen);
+	//FreeImage loads in BGR format, so you need to swap some bytes(Or use GL_BGR).
+
+	// Assign texture to ID
+	glBindTexture(GL_TEXTURE_2D, textureID);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, pixeles);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	// Parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	FreeImage_Unload(imagen);
+	return textureID;
+}
+
+// bind opengl buffers associated with mesh
+void Mesh::SetupMesh() {
+// set up VBO: all the vertices of the model in an array
+	// make a buffer and store its ID in vbo_
+	glGenBuffers(1, &vbo_);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+	// copy the vertex coordinates into the buffer we just bound
+	glBufferData(GL_ARRAY_BUFFER, vertices_.size() * sizeof(Vertex), &vertices_[0], GL_STATIC_DRAW);
+
+// Vertex array object setup
+	glGenVertexArrays(1, &vao_);
+	glBindVertexArray(vao_);
+
+// Elememt buffer object setup- stores indices to connect vertices
+	glGenBuffers(1, &ebo_);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_);
+	// copy indices into our freshly baked element buffer
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices_.size() * sizeof(GLuint), &indices_[0], GL_STATIC_DRAW);
+
+// set up buffers available to the vertex shader
+// glVertexAttribPointer( layout_location_#, buffer_element_size, type, normalized, stride, array_buffer_offset );
+	// position
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)0);
+	// normal
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, normal_));
+	// texture coordination
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, texcoords_));
+
+}
+
+// attach color vertex attribute to all meshes in a model
+void Model::addColorBuffer(GLuint layout_loc) {
+	for (auto& mesh : meshes_)
+		mesh.addColorBuffer(layout_loc);
+}
+// attach color vertex attribute to a single mesh
+void Mesh::addColorBuffer(GLuint layout_loc) {
+	// vertex color values
+	GLfloat *color_data = new GLfloat[3*vertices_.size()];
+	// random values
+	for (size_t i=0; i<3*vertices_.size(); i++){
+		color_data[i] = static_cast<GLfloat>(rand())/static_cast<GLfloat>(RAND_MAX);
+	}
+
+	// use vertex array object belonging to current mesh
+	glBindVertexArray(vao_);
+
+	// load vertex color data into opengl buffer
+	GLuint colorbuffer;
+	glGenBuffers(1, &colorbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, colorbuffer);
+	glBufferData(GL_ARRAY_BUFFER, 3*vertices_.size()*sizeof(GLfloat), color_data, GL_STATIC_DRAW);
+	// enable color vertex data
+	glEnableVertexAttribArray(layout_loc);
+	glVertexAttribPointer(layout_loc,3,GL_FLOAT,GL_FALSE,0,(void*)0);
+
+	// cleanup data
+	delete [] color_data;
 }
 
 
+// draw all meshes inside a model
+void Model::Draw(GLuint program) {
+	for (auto& mesh : meshes_)
+		mesh.Draw(program);
+}
+// draw a mesh with all textures attached to it
+void Mesh::Draw(GLuint program) {
+	// setup materials
+	GLuint diffuse_count = 1;
+	GLuint specular_count = 1;
+	// attach all textures associated with the mesh
+	for (GLuint i = 0; i < textures_.size(); i++) {
+		glActiveTexture(GL_TEXTURE0 + i);
+		stringstream ss;
+		string num;
+		string type = textures_[i].type_;
+		if (type == "texture_diffuse")
+			ss << diffuse_count++;
+		else if (type == "texture_specular")
+			ss << specular_count++;
+		num = ss.str();
+		string mattype = "material." + type + num;
+		GLuint loc = glGetUniformLocation(program, mattype.c_str());
+		glUniform1i(loc, i);
+		glBindTexture(GL_TEXTURE_2D, textures_[i].id_);
+	}
+	glActiveTexture(GL_TEXTURE0);
+
+	// draw
+	glBindVertexArray(vao_);
+	//glDrawArrays(GL_TRIANGLES, 0, indices_.size());
+	glDrawElements(GL_TRIANGLES, indices_.size(), GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+}
 

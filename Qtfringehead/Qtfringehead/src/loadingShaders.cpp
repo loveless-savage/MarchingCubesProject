@@ -23,6 +23,8 @@ GLuint OGLF::CreateProgram(vector<tuple<string, GLenum>> shadernames) {
 	vector<GLuint> shaders;
 	// setup shader deletion
 	auto delete_shaders = [](const vector<GLuint>& shaders) {
+		// range-based for loop:
+		// s takes the value of each element in the vector shaders
 		for (auto s : shaders) {
 			glDeleteShader(s);
 		}
@@ -70,8 +72,7 @@ GLuint OGLF::CreateProgram(vector<tuple<string, GLenum>> shadernames) {
 
 		// check compile result
 		std::string info;
-		if (!check_compile(shader, &info))
-		{
+		if (!check_compile(shader, &info)) {
 			delete_shaders(shaders);
 			glDeleteProgram(program);
 			throw runtime_error("A error ocurred when compile "
