@@ -25,6 +25,9 @@ in VS_OUT{
 }vs;
 
 
+layout (location=0) out vec3 color; // render to texture, not screen
+
+
 void main() {
 	// if entire model has one color
 	vec3 dColor = uColor;
@@ -91,7 +94,7 @@ void main() {
 	
 	vec3 specular = uK.z * s * uSpecularColor * lightColor + uK.z * s2 * uSpecularColor * lightColor2;
 	
-	gl_FragColor = vec4( ambient +  diffuse + specular   ,  1. );
+	color = vec3( ambient +  diffuse + specular );
 	//gl_FragColor = vec4(vec3(texture( shadowMap, projCoords.xy ).z),1.0);
 	
 }

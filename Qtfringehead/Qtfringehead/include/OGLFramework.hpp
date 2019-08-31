@@ -59,7 +59,7 @@ namespace OGLF
 			// resize the viewport
 			glViewport(0, 0, width, height);
 		}
-		void timerEvent(QTimerEvent* timer) override; // TODO
+		void timerEvent(QTimerEvent* timer) override;
 		/****interaction operation**********************/
 		// scrolling is interpreted as zooming
 		virtual void wheelEvent(QWheelEvent *e);

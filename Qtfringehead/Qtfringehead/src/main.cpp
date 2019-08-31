@@ -3,10 +3,11 @@
 #include <QtWidgets/QApplication>
 
 
+//shared_ptr<OGLF::Model> external_cube;
 
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
+
 	QApplication a(argc, argv);
 
 	Qtfringehead mainWin;

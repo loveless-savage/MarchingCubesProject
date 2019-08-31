@@ -11,7 +11,7 @@ layout (location = 1) in vec3 normal;
 
 out VS_OUT{
 	
-	vec3 vN;  //normal vector
+	vec3 vN; // normal vector
 	vec3 vL; // vector from point to light
     vec3 vE; // vector from point to eye
 }vs;
