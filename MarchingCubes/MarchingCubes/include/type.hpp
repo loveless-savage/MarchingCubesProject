@@ -3,7 +3,6 @@
 #include <glm/glm.hpp>
 
 enum class Light_Type {
-
 	SPOT,
 	POINT,
 	DIRECTION

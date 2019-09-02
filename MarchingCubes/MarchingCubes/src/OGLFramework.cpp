@@ -16,10 +16,10 @@
 #include <functional>
 #include <vector>
 #include <iostream>
-//sensitivity of mouse
+// sensitivity of mouse
 #define MOUSE_ROTATED_PARAMETER 0.05
 #define WHEEL_ROTATED_PARAMETER 0.01
-//periodic time radio
+// periodic time radio
 #define TIME_PERIOD (1000 * 1000)
 double g_per_time_radio;
 
@@ -30,9 +30,8 @@ using glm::mat4;
 
 const double PI = float(M_PI);
 
-// initialize the class
-OGLFramework::OGLFramework(QWidget *parent, Qt::WindowFlags flags) : QGLWidget(parent)
-{
+// initialize OGLFramework
+OGLFramework::OGLFramework(QWidget *parent, Qt::WindowFlags flags) : QGLWidget(parent) {
 	this->setEnabled(true);
 	m_model_trans = glm::mat4(1.0f);
 	m_camera_position = { 0.0f, 0.0f, 8.0f };
@@ -40,18 +39,14 @@ OGLFramework::OGLFramework(QWidget *parent, Qt::WindowFlags flags) : QGLWidget(p
 	// get a matrix ready to shift world to view space
 	m_camera_view = glm::lookAt(glm::vec3(m_camera_position), glm::vec3{ 0, 0, 0 }, m_camera_up);
 	this->setFocusPolicy(Qt::StrongFocus);
-	//set timer interval and start
+	// set timer interval and start
 	m_timer_id = this->startTimer(0);
 }
 
-/****QT_OpenGL_Framework**********************/
 // initialize the OpenGL
-void OGLFramework::initializeGL()
-{
+void OGLFramework::initializeGL() {
 	GLenum err = glewInit();
-	if (GLEW_OK != err)
-	{
-
+	if (GLEW_OK != err) {
 		qDebug() << "glewInit error...................." << glewGetErrorString(err);
 		return;
 	}
@@ -60,14 +55,13 @@ void OGLFramework::initializeGL()
 	this->OnInit();
 
 }
-void OGLFramework::paintGL()
-{
+// run on every update
+void OGLFramework::paintGL() {
 	this->OnUpdate();
 }
 
 void OGLFramework::timerEvent(QTimerEvent* timer) {
-
-	//caculate the periodic time radio
+	// caculate the periodic time radio
 	uint ms = QDateTime::currentMSecsSinceEpoch() - QDateTime(QDate::currentDate()).toMSecsSinceEpoch();	// milliseconds
 	ms %= TIME_PERIOD;
 	g_per_time_radio = ms * 1.0 / TIME_PERIOD;  // [ 0., 1. ) // TODO
@@ -76,7 +70,7 @@ void OGLFramework::timerEvent(QTimerEvent* timer) {
 
 // interaction
 
-// scrolling is interpreted as zooming
+// wheelEvent: scrolling is interpreted as zooming
 void OGLFramework::wheelEvent(QWheelEvent *e) {
 
 	QPoint numDegrees = e->angleDelta() / 8;
@@ -89,24 +83,21 @@ void OGLFramework::wheelEvent(QWheelEvent *e) {
 	this->updateGL();
 }
 
-// only move camera on drag when mouse is pressed (either button)
+// mousePressEvent: only move camera on drag when mouse is pressed (either button)
 void OGLFramework::mousePressEvent(QMouseEvent *e) {
 	// lastx_ & lasty_ normally store last frame position, but at first there is no previous frame to get position from
 	lastx_ = e->x();
 	lasty_ = e->y();
-	if (e->button() == Qt::LeftButton)
-	{
+	if (e->button() == Qt::LeftButton) {
 		lbutton_down_ = true;
 		rbutton_down_ = false;
-	}
-	else if (e->button() == Qt::RightButton)
-	{
+	} else if (e->button() == Qt::RightButton) {
 		rbutton_down_ = true;
 		lbutton_down_ = false;
 	}
 }
 
-// dragging mouse is interpreted as a trackball
+// mouseMoveEvent: dragging mouse when interpreted as a trackball
 void OGLFramework::mouseMoveEvent(QMouseEvent *e) {
 	// x & y are macros for e->x() and e->y()
 	float x = e->x();
@@ -157,7 +148,7 @@ void OGLFramework::mouseMoveEvent(QMouseEvent *e) {
 		auto newpos = hrot*vrot*glm::vec4{ m_camera_position, 1 }; // vec4
 		auto newdir = glm::normalize(glm::vec3(newpos)); // vec3
 		if (abs(glm::dot(newdir, m_camera_up)) < 0.99f) {
-			m_camera_position = glm::vec3(newpos); // vec3 TODO
+			m_camera_position = glm::vec3(newpos); // vec3
 			m_camera_view = glm::lookAt(glm::vec3(newpos), glm::vec3{ 0, 0, 0 }, m_camera_up); // vec3
 		}
 	}

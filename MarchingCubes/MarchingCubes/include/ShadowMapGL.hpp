@@ -32,31 +32,31 @@ private:
 	shared_ptr<OGLF::Model> m_dragon_model, m_cube_model;
 	// container for the shader program
 	GLuint m_model_program;
-	//view (global->camera) and projective (camera->perspective) matrices
+	// view (global->camera) and projective (camera->perspective) matrices
 	glm::mat4 m_view, m_proj;
 
-	//pure color model and shader program
+	// pure color model and shader program
 	shared_ptr<OGLF::Model> m_pc_model;
 	GLuint m_pc_model_program;
 
-	//shaders to render light's view point
-	GLuint m_render_depth_tex_program;
-	//objects
+	// shaders to render light's view point
+	GLuint m_render_shadow_tex_program;
+	// objects
 	shared_ptr<OGLF::Model> m_plane_model;
 
-	//frame buffeer
+	// frame buffeer
 	GLuint m_framebuffer;
-	//depth texture
+	// depth texture
 	GLuint m_depth_tex;
-	//depth texture2
+	// depth texture2
 	GLuint m_depth_tex2;
-	//shadow map;
+	// shadow map;
 	glm::mat4 depthMVP;
-	//shadow map2
+	// shadow map2
 	glm::mat4 depthMVP2;
-	//lights
+	// light
 	Light light;
-	//light 2
+	// light 2
 	Light light2;
 
 
@@ -83,9 +83,9 @@ protected:
 	);
 
 // TODO
-	//initialize texture map for shadow map
+	// initialize texture map for shadow map
 	void initShadowMapTex(GLuint& tex, uint width, uint height);
-	//input: modes, models, transform matrix ptr, light view projection matr
+	// input: modes, models, transform matrix ptr, light view projection matr
 	void generateShadowMap(
 		GLuint& tex,
 		const std::vector<shared_ptr<OGLF::Model>>& models,
@@ -93,10 +93,10 @@ protected:
 		const glm::mat4& depth_vp,
 		uint width, uint height
 	);
-	//shadowmap width, height, output:tex
-	//output: texture
+	// shadowmap width, height, output:tex
+	// output: texture
 
-	//key event
+	// when any key is pressed
 	void keyPressEvent(QKeyEvent *event);
 
 };
