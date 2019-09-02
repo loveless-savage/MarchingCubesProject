@@ -14,7 +14,7 @@ void ShadowMapGL::OnInit() {
 	m_model_program = OGLF::CreateProgram("./shaders/verts.c", "./shaders/frags.c");
 	m_pc_model_program = OGLF::CreateProgram("./shaders/purecolor_verts.c", "./shaders/purecolor_frags.c");
 	//shader for render depth texture from light's view point
-	m_render_depth_tex_program = OGLF::CreateProgram("./shaders/render_depth_tex_verts.c", "./shaders/render_depth_tex_frags.c");
+	m_render_depth_tex_program = OGLF::CreateProgram("./shaders/render_shadow_tex_verts.c", "./shaders/render_shadow_tex_frags.c");
 
 	// load objects***************************/
 	m_dragon_model = OGLF::LoadModel("./data/dragon.obj");
