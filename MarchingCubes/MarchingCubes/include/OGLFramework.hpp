@@ -29,13 +29,11 @@
 using glm::mat4;
 using glm::vec3;
 
-namespace OGLF
-{
+namespace OGLF {
 
 
 	// OGLFramework is a type of widget
-	class OGLFramework : public QGLWidget
-	{
+	class OGLFramework : public QGLWidget {
 		Q_OBJECT
 
 	public:
@@ -59,7 +57,7 @@ namespace OGLF
 			// resize the viewport
 			glViewport(0, 0, width, height);
 		}
-		void timerEvent(QTimerEvent* timer) override; // TODO
+		void timerEvent(QTimerEvent* timer) override;
 		/****interaction operation**********************/
 		// scrolling is interpreted as zooming
 		virtual void wheelEvent(QWheelEvent *e);
@@ -67,8 +65,7 @@ namespace OGLF
 		virtual void mousePressEvent(QMouseEvent *e);
 		// dragging mouse is interpreted as a trackball
 		virtual void mouseMoveEvent(QMouseEvent *e);
-		virtual void closeEvent(QCloseEvent *event)
-		{
+		virtual void closeEvent(QCloseEvent *event) {
 			this->hide();
 		}
 

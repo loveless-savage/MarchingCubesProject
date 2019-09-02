@@ -5,8 +5,7 @@ using namespace OGLF;
 #define WINDOW_SIZE_HEIGHT 600
 
 QtWrapper::QtWrapper(QWidget *parent)
-	: QMainWindow(parent)
-{
+	: QMainWindow(parent) {
 	ui.setupUi(this);
 	this->setGeometry(QRect(50, 100, WINDOW_SIZE_WIDTH, WINDOW_SIZE_HEIGHT));
 	/*class you define*/

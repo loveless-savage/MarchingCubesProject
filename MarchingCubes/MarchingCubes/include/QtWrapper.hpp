@@ -20,8 +20,7 @@
 * =====================================================================================
 */
 
-class QtWrapper : public QMainWindow
-{
+class QtWrapper : public QMainWindow {
 	Q_OBJECT
 
 public:
