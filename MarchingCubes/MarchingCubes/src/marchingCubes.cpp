@@ -1,7 +1,12 @@
 #include <marchingCubes.hpp>
 
 
-// return final calculated model
-OGLF::Model MarchingCubes::dumpModel(){
+// generate lookup table for per-cell primitives
+void MarchingCubes::genLookupTable(){
+
+};
+
+// generate mesh with normals from given vector field
+void MarchingCubes::genModel(){
 
 };
