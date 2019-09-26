@@ -5,6 +5,7 @@
 #include <cmath>
 #include <iostream>
 #include <vector>
+#include <bitset>
 
 // how many dimensions? either 3 or 4
 #define DIMENSION 3
@@ -15,12 +16,16 @@
 #define getBit2(n,bit) ((n>>bit)&3)
 
 
+// find a value in an array, starting at a given position
+int findByIdx(char array[], int arraySize, char idx, int startPos);
+
+
 class CubeTable {
 public:
 	// initialize CubeTable
 	CubeTable(
 		// receive parameters
-	):
+	)//:
 		// initialize member variables
 	{
 		// run on initialization
@@ -50,6 +55,8 @@ private:
 	char* table3D[256];
 	// find the index for a given vertex when attached to another face
 	char congruentEdge3D(char idx);
+	// given a ring of mesh verts on a cube, interpolate them into a triangle mesh
+	void interpTris(char vertsByCube[], int ringStart, int ringSize);
 
 	void genTable4D();
 	char* table4D[1<<(16-3)];
@@ -58,4 +65,3 @@ private:
 	void deleteTable();
 };
 
-#endif

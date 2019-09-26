@@ -251,7 +251,7 @@ void MarchingCubes::readLookupTable(int idx){
 	swapAxisIdx(tempIdx,axisBit,axisOther);
 
 	// now that we have rotated our cube, we can actually read from the lookup table!
-	// first figure out how to store a mesh
+	// first figure out how to store a mesh // TODO
 	//lookupTable->getSize(tempIdx);
 	//lookupTable->getArray(tempIdx);
 }
