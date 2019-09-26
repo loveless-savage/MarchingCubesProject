@@ -7,6 +7,9 @@
 #include <vector>
 #include <bitset>
 
+// are we reflecting to reduce required lookup size?
+#define REFL_LOOKUP 0
+
 // how many dimensions? either 3 or 4
 #define DIMENSION 3
 #define POW2(DIM) (1<<DIM)

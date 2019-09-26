@@ -158,6 +158,7 @@ void MarchingCubes::do_u(int k,int j,int i){
 // read from lookup table
 void MarchingCubes::readLookupTable(int idx){
 	int tempIdx = idx;
+#if REFL_LOOKUP
 	// we want to find a failing corner, so if all corners in the grid cell pass we invert them
 	if(idx == POW2(POW2(DIMENSION))-1) tempIdx=0;
 
@@ -251,6 +252,7 @@ void MarchingCubes::readLookupTable(int idx){
 	swapAxisIdx(tempIdx,axisBit,axisOther);
 
 	// now that we have rotated our cube, we can actually read from the lookup table!
+#endif //#if REFL_LOOKUP
 	// first figure out how to store a mesh // TODO
 	//lookupTable->getSize(tempIdx);
 	//lookupTable->getArray(tempIdx);

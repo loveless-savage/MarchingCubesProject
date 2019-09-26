@@ -5,7 +5,7 @@ using namespace std;
 // find a value in an array, starting at a given position
 int findByIdx(char array[], int arraySize, char idx, int startPos){
 	for(int j=startPos; j<arraySize; j++){
-		if(array[j]==idx) return j;
+		if(array[j]|(1<<7)==idx|(1<<7)) return j;
 	}
 	cout<<endl<<"hoo boy, you have a broken loop! couldn't find index "<<bitset<8>(idx)<<endl;
 	cout<<"array= ";
@@ -156,7 +156,6 @@ void CubeTable::genTable3D(){
 		 */
 		cout<<"\n\t\t"<<flush;
 		for(int faceIdxInCube=0; faceIdxInCube<0b110; faceIdxInCube++){
-			cout<<"\tface "<<faceIdxInCube<<flush;
 			// which dimensions do we use for the current face?
 			int dimA, dimB;
 			switch(faceIdxInCube>>1){
@@ -177,7 +176,6 @@ void CubeTable::genTable3D(){
 							   + (getBit( stateIdxOfCube, (dimA|dimB) )<<3);
 			}
 
-			cout<<"\treading from table2D"<<flush;
 			// how many mesh vertices this face? 0, 1, or 2
 			mEdgeCountInFace = table2D[stateIdxOfFace][0];
 			// do nothing if the lookup array is empty
@@ -192,7 +190,9 @@ void CubeTable::genTable3D(){
 				edgesByFace[vNum3d++] = table2D[stateIdxOfFace][4] | (faceIdxInCube<<4);
 			}
 		}
-		cout<<"\n\tall faces collected"<<flush;
+		cout << "\tall faces collected " << endl << "edges:";
+		for (int j = 0; j < vNum3d; j++) cout <<" "<< bitset<8>(edgesByFace[j]);
+		cout << flush;
 		
 		/* now condense vertices into vertsByCube[]
 		 * currently, edgesByFace[] holds a bunch of duplicate vertices
@@ -204,7 +204,7 @@ void CubeTable::genTable3D(){
 		 */
 		table3D[stateIdxOfCube] = new char[vNum3d/2+1];
 		char* vertsByCube = table3D[stateIdxOfCube];
-		cout<<"\ttable pointer set up"<<flush;
+		cout<<"\n\tverts compressed: "<<flush;
 		// keep track of rings
 		int ringStart=1, ringSize=0;
 		for(int i=0;i<vNum3d;i+=2){
@@ -213,20 +213,24 @@ void CubeTable::genTable3D(){
 			// if not yet counted, use as a seed to capture a ring
 			int ringHead = i; // start at the current vertex
 			ringSize=0;
+			/*ERROR HERE*/
 			do{ // ring loop!
 				// find coincident vertex
 				ringHead = findByIdx(
-					edgesByFace,(4*6),
+					edgesByFace,(vNum3d),
 					congruentEdge3D(edgesByFace[ringHead]),
 				i);
 				// mark our new vertex as used
-				edgesByFace[ringHead] ^= 1<<7;
+				edgesByFace[ringHead] |= 1<<7;
 				// add it to the ring, but convert it to universal cube coords
 				vertsByCube[ringStart+ringSize] = edgesByFace[ringHead]; // TODO
 				ringSize++; // the ring is bigger now!
 
 				// prep the mesh vertex connected to the current one on the same face
 				ringHead ^=1; // always next to it in edgesByFace[]
+				edgesByFace[ringHead] |= 1 << 7; // used vertex
+				
+				cout << " ringHead="<<ringHead<<" i="<<i<< " edge=" << bitset<8>(edgesByFace[ringHead]) <<" "<< bitset<8>(edgesByFace[0]) << flush;
 
 			// this loop continues until the ring returns to the original vertex
 			}while(ringHead != i); // ring loop!
@@ -235,8 +239,11 @@ void CubeTable::genTable3D(){
 			interpTris(vertsByCube, ringStart, ringSize);
 			// remember that we already took care of this ring
 			ringStart += ringSize;
+
 		}
-		cout<<"\trings found"<<flush;
+		cout<<"\trings found" << endl << "edges:";
+		for (int j = 0; j < vNum3d; j++) cout << " " << bitset<8>(edgesByFace[j]);
+		cout << flush;
 	}
 	cout<<"all cases taken care of!"<<endl;
 }
@@ -319,6 +326,7 @@ char CubeTable::congruentEdge3D(char idx){
 }
 // given a ring of mesh verts on a cube, interpolate them into a triangle mesh
 void CubeTable::interpTris(char vertsByCube[], int ringStart, int ringSize){
+	// to compensate for rotation/reflection, we must keep track of the originally 
 }
 
 void CubeTable::genTable4D(){
