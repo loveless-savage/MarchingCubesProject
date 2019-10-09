@@ -1,10 +1,16 @@
-#include <marchingCubes.hpp>
+#include "marchingCubes.hpp"
 
 // convert grid coordinates to world space coordinates
 #define G_TO_W(gcoord) (gcoord*frameSize/cellNum-frameSize/2)
 
+// access different parts of the mesh vertex ID's
+#define AXISOF(idx) (idx&3)
+#define PT1OF(idx) (idx>>2)
+#define PT2OF(idx) (PT1OF(idx)|(1<<AXISOF(idx)))
+
 using namespace std;
 
+#if REFLECTION_COMPRESSION
 // reflections to align the first zero in each index to the leftmost position
 int reflectIdx(int idx, int axis){
 	int shift = POW2(axis);
@@ -19,11 +25,6 @@ int reflectIdx(int idx, int axis){
 		case 2:
 			mask = 0b00001111;//00001111;
 			break;
-#if DIMENSION == 4
-		case 3:
-			mask = 0b0000000011111111;
-			break;
-#endif
 		default:
 			return idx;
 	}
@@ -49,65 +50,61 @@ int swapAxisIdx(int idx, int axis1, int axis2){
 	}
 	return tempIdx;
 }
+#endif //#if REFLECTION_COMPRESSION
 
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
 
-// generate mesh with normals from given vector field
+// generate mesh with normals from given vector field // TODO
 void MarchingCubes::genModel(){
 	cout<<"alright, let's get this model going";
-#if DIMENSION == 4
-	for(int l=0;l<cellNum+1;l++){
-#endif
-	for(int k=0;k<cellNum+1;k++){
-		cout<<endl;
-	for(int j=0;j<cellNum+1;j++){
-		cout<<"|";
-	for(int i=0;i<cellNum+1;i++){
-		cout<<"p";
-	// point level
-		do_u(k,j,i);
-#if LOOKUP_TABLE
-	// grab mesh chunk from lookup table
+
+	// calculate all values that lie on grid points
+	for(int k=0;k<cellNum+1;k++) for(int j=0;j<cellNum+1;j++) for(int i=0;i<cellNum+1;i++) do_u(k,j,i);
+//syncThreads();
+
+	// gather pointers to the lookup table rather than copying at this point
+	for(int k=0;k<cellNum;k++){
+	for(int j=0;j<cellNum;j++){
+	for(int i=0;i<cellNum;i++){
 		// first figure out what our index is based on current grid cell
 		int idx = 0;
 		for(int bit=0;bit<=POW2(DIMENSION);bit++){
 			idx |= pts
-#if DIMENSION == 4
-				[l-getBit(bit,3)]
-#endif
-				[k-getBit(bit,2)] // jump around all corners of the cube
-				[j-getBit(bit,1)]
-				[i-getBit(bit,0)]
-				.f > 0 ? 1<<bit : 0;
+				[k-1+getBit(bit,2)] // iterate through all corners of the cube
+				[j-1+getBit(bit,1)] // access each one's calculated scalar value
+				[i-1+getBit(bit,0)] // then do a pass/fail test
+				.f > 0 ? 1<<bit : 0; // if pass, flip the corresponding bit to 1
 		}
 		// at this point, idx == 0b10110001 or something
 		// the leftmost bit of idx corresponds to the innermost corner of the grid cell
 
-		readLookupTable(idx);
+		// in the arrays, k j and i coordinates are condensed into one coordinate
+		readLookupTable(idx, k*cellNum*cellNum + j*cellNum + i);
 
-#else
-	// line level: find possible vertices along 3 gridlines
-		//if(l>0) interpLine(l,k,j,i,3); // interpolate down a hyperlayer
-		if(k>0) interpVerts(k,j,i,2); // interpolate down a layer
-		if(j>0) interpVerts(k,j,i,1); // interpolate back to previous row
-		if(i>0) interpVerts(k,j,i,0); // interpolate back along the row
-	// plane level: connect vertices with outer edges along 3 grid planes
-		//if(l>0&&k>0) interpEdge(k,j,i,3,2);
-		//if(l>0&&j>0) interpEdge(k,j,i,3,1);
-		//if(l>0&&i>0) interpEdge(k,j,i,3,0);
-		if(k>0&&j>0) interpEdges(k,j,i,2,1);
-		if(k>0&&i>0) interpEdges(k,j,i,2,0);
-		if(j>0&&i>0) interpEdges(k,j,i,1,0);
-	// cube level: connect outer edges with triangles along 1 grid cube
-		//if(l>0&&k>0&&j>0) interpTris(k,j,i,0);
-		//if(l>0&&k>0&&i>0) interpTris(k,j,i,1);
-		//if(l>0&&j>0&&i>0) interpTris(k,j,i,2);
-		if(k>0&&j>0&&i>0) interpTris(k,j,i,3);
-#endif
-	}}}//}
-	cout<<endl;
+	}}} // gather pointers to the lookup table
+//syncThreads();
+	
+// this next section is serial! it cannot be parallelized
+	// condense all values into one array
+	for(int k=0;k<cellNum;k++){
+	for(int j=0;j<cellNum;j++){
+	for(int i=0;i<cellNum;i++){
+		// keep track of how many total verts were found
+		if( coord(k,j,i) > 0 ){ // except the first voxel!
+			vertSums[coord(k,j,i)] = vertSums[coord(k,j,i)-1] + vertSizes[coord(k,j,i)];
+		}
+		// loop through all mesh indices in this voxel
+		for(int idxNum=0; idxNum<indexSizes[coord(k,j,i)]; idxNum++){
+			// for each mesh index, check if the associated vertex has been used in an adjacent voxel
+			// then if it has, add an index pointing to that vertex
+			// if not, add the new vertex
+			pushIdxWithoutDups(k,j,i,idxNum);
+		}
+	}}} // condense all values into one array each
 };
 
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
+#if 0
 // diagnostic printout of the mesh
 void MarchingCubes::diag(){
 	cout<<"aw yiss"<<endl;
@@ -131,7 +128,73 @@ void MarchingCubes::diag(){
 	}
 	cout<<endl;
 }
+#endif
 
+// read from linear arrays with 3D coordinates
+int MarchingCubes::coord(int k, int j, int i){ return k*cellNum*cellNum+j*cellNum+i ; }
+// read from vertsTmp[] using indices out of indicesTmp[]
+char MarchingCubes::vertsTmp_byIdx(int k, int j, int i, int idxNum){
+	return vertsTmp[coord(k,j,i)][ indicesTmp[coord(k,j,i)][idxNum] ];
+}
+
+// push a new index onto the indices vector, unless it is a duplicate
+void MarchingCubes::pushIdxWithoutDups(int k, int j, int i, int idxNum){
+	// first capture the ID of the focus vertex
+	char focusVert = vertsTmp_byIdx(k,j,i,idxNum);
+
+	/* eliminate duplicates
+	 * each mesh vertex lies on a grid edge, so 4 voxels reference each mesh vertex
+	 * (except edges on the outside border!)
+	 * we always want to check for the vertex's occurence in the earliest processed voxel of the four
+	 * so we go through each coordinate {k j i} and evaluate whether to subtract 1
+	 * we won't if the focus voxel is on the border!
+	 * we also don't subtract one from the coordinate parallel to the focus grid edge
+	 */
+	// check that focus edge is not parallel to axis k, and that k!=0,
+	// and that we are on the bottom edge of the voxel
+	if( AXISOF(focusVert)!=2 && k!=0 && getBit(PT1OF(focusVert),2)==0 ){
+		k -= 1; // go to the voxel below
+		focusVert |= 1<<4; // focus on the top of the new voxel instead of the bottom
+	} 
+	// check that focus edge is not parallel to axis j, and that j!=0,
+	// and that we are on the back edge of the voxel
+	if( AXISOF(focusVert)!=1 && j!=0 && getBit(PT1OF(focusVert),1)==0 ){
+		j -= 1; // go to the voxel behind
+		focusVert |= 1<<3; // focus on the front of the new voxel instead of the back
+	} 
+	// check that focus edge is not parallel to axis i, and that i!=0,
+	// and that we are on the back edge of the voxel
+	if( AXISOF(focusVert)!=0 && i!=0 && getBit(PT1OF(focusVert),0)==0 ){
+		i -= 1; // go to the voxel behind
+		focusVert |= 1<<2; // focus on the front of the new voxel instead of the back
+	} 
+
+	// with our new focus voxel, search through its indices for the duplicate vertex
+	for(int subIdxNum=0; subIdxNum< 0/*TODO*/; subIdxNum++){
+	}
+
+	// if no duplicates were successfully found, we must push the focus vertex onto the vertex stack
+	pushGlobalCoordinatesVertex(k,j,i,focusVert);
+	
+	/*
+	pushIdxWithoutDups(k,j,i,idxNum);
+	// check for whether this vertex has been used before // TODO
+	char current_vtx = vertsTmp_byIdx(k,j,i,idxNum);
+	// it wasn't used for certain if it is on the outer edge of the voxel
+	if( PT2OF(current_vtx)==7 // voxels are indexed with the 0 pole facing in
+	// ...or if it's on the bottom edge of the entire frame
+		|| (PT1OF(current_vtx)==0 && k*j*i==0)
+	){}
+	// add the index to the cumulative vector
+	indices.push_back(indicesTmp[coord(k,j,i)][idxNum]);
+	*/
+}
+
+// push a new vertex onto the verts vector, first converting it to global space coordinates! // TODO
+void MarchingCubes::pushGlobalCoordinatesVertex(int k, int j, int i, int idx){
+}
+
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
 // vector field operator
 void MarchingCubes::do_u(int k,int j,int i){
 	// deduce actual world space coordinates from grid index
@@ -139,24 +202,19 @@ void MarchingCubes::do_u(int k,int j,int i){
 	x = G_TO_W(i);
 	y = G_TO_W(j);
 	z = G_TO_W(k);
-#if DIMENSION == 4
-	w = G_TO_W(l);
-#endif
 
 	// vector equation
 	pts[k][j][i].x = sin(x);
 	pts[k][j][i].y = sin(y);
 	pts[k][j][i].z = sin(z);
-#if DIMENSION == 4
-	pts[l][k][j][i].w = sin(w);
-#endif
 	// scalar equation
 	pts[k][j][i].f = sin(x)+sin(y)+sin(z);
 };
 
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
 // read from lookup table
-void MarchingCubes::readLookupTable(int idx){
+void MarchingCubes::readLookupTable(int idx, int coord){
+#if REFLECTION_COMPRESSION
 	int tempIdx = idx;
 	// we want to find a failing corner, so if all corners in the grid cell pass we invert them
 	if(idx == POW2(POW2(DIMENSION))-1) tempIdx=0;
@@ -168,9 +226,6 @@ void MarchingCubes::readLookupTable(int idx){
 
 	// here we reflect the grid cell until it puts the failing corner leftmost
 	// for each 0 in the binary expansion of bit, invert the corresponding dimension
-#if DIMENSION == 4
-	if(getBit(bit,3)==0) tempIdx=reflectIdx(tempIdx,3);
-#endif
 	if(getBit(bit,2)==0) tempIdx=reflectIdx(tempIdx,2);
 	if(getBit(bit,1)==0) tempIdx=reflectIdx(tempIdx,1);
 	if(getBit(bit,0)==0) tempIdx=reflectIdx(tempIdx,0);
@@ -178,11 +233,7 @@ void MarchingCubes::readLookupTable(int idx){
 	// analyze corners adjacent to the failing corner
 	int idxPrefix = getBit(tempIdx,POW2(DIMENSION)-1-1)
 				  + (getBit(tempIdx,POW2(DIMENSION)-1-2)<<1)
-				  + (getBit(tempIdx,POW2(DIMENSION)-1-4)<<2)
-#if DIMENSION == 4
-				  + (getBit(tempIdx,POW2(DIMENSION)-1-8)<<3)
-#endif
-				  ;
+				  + (getBit(tempIdx,POW2(DIMENSION)-1-4)<<2);
 	
 	/* we have 4 cases for our adjacent corners:
 	 * -> all the same (0's or 1's)
@@ -197,25 +248,12 @@ void MarchingCubes::readLookupTable(int idx){
 	// calculate the case number
 	int caseNum = getBit(idxPrefix,0)
 				+ getBit(idxPrefix,1)
-				+ getBit(idxPrefix,2)
-#if DIMENSION == 4
-				+ getBit(idxPrefix,3)
-#endif
-				;
+				+ getBit(idxPrefix,2);
 
 	// figure out what axes to swap
 	int axisBit=DIMENSION,axisOther=0;
 	int axisBit2=0,axisOther2=0; // if there are two swaps- might not happen
 	switch(caseNum){
-#if DIMENSION == 4
-		case 3: // put the failing corner in the w dimension
-			// find the single failing corner
-			while(getBit(idxPrefix,axisBit-1)) axisBit--;
-			axisBit--;
-			// swap the appropriate corner with the w axis corner
-			axisOther=3;
-			break;
-#endif
 		case 2: // put two passing corners in the x & y dimensions
 			// we are doing two flips! use axisBit2
 			axisBit2=DIMENSION;
@@ -249,15 +287,22 @@ void MarchingCubes::readLookupTable(int idx){
 			break;
 	}
 	swapAxisIdx(tempIdx,axisBit,axisOther);
-
 	// now that we have rotated our cube, we can actually read from the lookup table!
-	// first figure out how to store a mesh // TODO
-	//lookupTable->getSize(tempIdx);
-	//lookupTable->getArray(tempIdx);
+#endif // #if REFLECTION_COMPRESSION
+	// make the focus element of vertsTmp[] point to the correct entry of the lookup table
+	vertsTmp[coord] = lookupTable->getVertexArray(idx);
+	// same with indicesTmp
+	indicesTmp[coord] = lookupTable->getIndexArray(idx);
+
+	// we also want to remember the sizes of each array, since they vary
+	vertSizes[coord] = lookupTable->getNumVerts(idx);
+	indexSizes[coord] = lookupTable->getNumIndices(idx);
 }
 
 
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
+//real-time interpolation
+#if LOOKUP_TABLE == 0
 // interpolate vertices
 void MarchingCubes::interpVerts(int k, int j, int i, int axis){
 	// pointers to grid points we want
@@ -317,4 +362,4 @@ void MarchingCubes::interpTris(int k, int j, int i, int axis_norm){
 // interpolate simplices
 void MarchingCubes::interpSimp(int k, int j, int i){
 }
-
+#endif

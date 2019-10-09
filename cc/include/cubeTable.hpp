@@ -16,6 +16,9 @@
 #define getBit2(n,bit) ((n>>bit)&3)
 
 
+// print the value of an edge in readable format, given face-based ID
+void hrEdgeIdx(char idx);
+
 // find a value in an array, starting at a given position
 int findByIdx(char array[], int arraySize, char idx, int startPos);
 
@@ -29,11 +32,7 @@ public:
 		// initialize member variables
 	{
 		// run on initialization
-#if DIMENSION == 4
-		genTable4D();
-#else
 		genTable3D();
-#endif
 	};
 
 	// destructor
@@ -42,9 +41,11 @@ public:
 	}
 
 	// return the number of elements in each micro-mesh
-	char getSize(int idx);
+	char getNumVerts(int idx);
+	char getNumIndices(int idx);
 	// return the location of the array of elements
-	char* getArray(int idx);
+	char* getVertexArray(int idx);
+	char* getIndexArray(int idx);
 	
 private:
 	// to generate our final lookup table, we step the dimension up one at a time
@@ -52,14 +53,13 @@ private:
 	char* table2D[16];
 
 	void genTable3D();
-	char* table3D[256];
+	char* table3D[256*2]; // alternate between arrays of verts and indices
 	// find the index for a given vertex when attached to another face
 	char congruentEdge3D(char idx);
+	// convert mVertexIdx from face-based to universal cube coords
+	char faceCoordTo3DCoord(char idx);
 	// given a ring of mesh verts on a cube, interpolate them into a triangle mesh
-	void interpTris(char vertsByCube[], int ringStart, int ringSize);
-
-	void genTable4D();
-	char* table4D[1<<(16-3)];
+	void interpTris(int ringStart, int ringSize, char indicesByCube[], int& numIndices);
 	
 	// lots of space to free from the heap when we're done!
 	void deleteTable();
