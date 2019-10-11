@@ -6,6 +6,7 @@
 #include "OGLFramework.hpp"
 #include "loadingModel.hpp"
 #include "loadingShaders.hpp"
+#include "marchingCubes.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -26,9 +27,14 @@ public:
 		glDeleteProgram(m_model_program);
 	}
 
+	void giveMarchingCubes_model(MarchingCubes* input_model);
+
 private:
 
-	// models
+	// marching Cubes model
+	MarchingCubes *marchingCubes_model;
+
+	// models loaded from files
 	shared_ptr<OGLF::Model> m_dragon_model, m_cube_model;
 	// container for the shader program
 	GLuint m_model_program;
@@ -82,9 +88,19 @@ protected:
 		glm::float32 uShininess // phong lighting
 	);
 
-// TODO
+	// render the marching cubes model using phong lighting
+	virtual void renderPhongMCM(
+		glm::mat4& model_mat, // model transform matrix,
+		glm::vec3 && obj_Color, // obj's material,
+		glm::vec3 && uK,
+		glm::vec3 && uSpecularColor,
+		glm::float32 uShininess // phong lighting
+	);
+
+
 	// initialize texture map for shadow map
 	void initShadowMapTex(GLuint& tex, uint width, uint height);
+
 	// input: modes, models, transform matrix ptr, light view projection matr
 	void generateShadowMap(
 		GLuint& tex,
@@ -95,6 +111,16 @@ protected:
 	);
 	// shadowmap width, height, output:tex
 	// output: texture
+
+	// the same, but with marching cubes model
+	void generateShadowMapWithMCModel(
+		GLuint& tex,
+		const std::vector<shared_ptr<OGLF::Model>>& models,
+		const std::vector<glm::mat4>& model_trans,
+		const glm::mat4& marchingCubes_model_mat,
+		const glm::mat4& depth_vp,
+		uint width, uint height
+	);
 
 	// when any key is pressed
 	void keyPressEvent(QKeyEvent *event);

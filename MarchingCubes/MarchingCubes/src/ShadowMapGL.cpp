@@ -8,6 +8,12 @@ bool spot_light_on = true;
 bool direct_light_on = true;
 
 
+// point the system to a marching cubes model
+void ShadowMapGL::giveMarchingCubes_model(MarchingCubes* input_model){
+	marchingCubes_model = input_model;
+}
+
+
 // start up the whole thing
 void ShadowMapGL::OnInit() {
 // load shaders
@@ -18,6 +24,9 @@ void ShadowMapGL::OnInit() {
 	// to render shadow texture from light's view point
 	m_render_shadow_tex_program = OGLF::CreateProgram(
 		"./shaders/render_shadow_tex_verts.c", "./shaders/render_shadow_tex_frags.c");
+
+// load marching cubes model
+	marchingCubes_model->genModel();
 
 // load objects
 	m_dragon_model = OGLF::LoadModel("./data/dragon.obj");
@@ -97,17 +106,22 @@ void ShadowMapGL::OnUpdate() {
 	// pop model matrices onto the model matrix "stack"
 	model_trans.push_back(dragon_model_mat);
 
-	this->generateShadowMap(
+	// marching cubes model matrix
+	glm::mat4 marchingCubes_model_mat = m_model_trans * marchingCubes_model->frameScaleMatrix();
+
+	this->generateShadowMapWithMCModel(
 		m_depth_tex,
 		models,
 		model_trans,
+		marchingCubes_model_mat,
 		depthMVP,
 		SHADOWMAP_RES_WIDTH, SHADOWMAP_RES_HEIGHT);
 
-	this->generateShadowMap(
+	this->generateShadowMapWithMCModel(
 		m_depth_tex2,
 		models,
 		model_trans,
+		marchingCubes_model_mat,
 		depthMVP2,
 		SHADOWMAP_RES_WIDTH, SHADOWMAP_RES_HEIGHT);
 
@@ -121,7 +135,16 @@ void ShadowMapGL::OnUpdate() {
 	glViewport(0, 0, this->width(), this->height());
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	// draw marching cubes model
+	this->renderPhongMCM(
+		marchingCubes_model_mat,
+		glm::vec3(0., 1., 0.),
+		glm::vec3(0.3, 0.6, 0.1),
+		glm::vec3(1.0, 1.0, 1.0),
+		glm::float32(6.0));
+
 	// draw dragon
+	/*
 	this->renderPhongObject(
 		m_dragon_model,
 		dragon_model_mat,
@@ -139,6 +162,7 @@ void ShadowMapGL::OnUpdate() {
 		glm::vec3(0.3, 0.6, 0.1),
 		glm::vec3(1.0, 1.0, 1.0),
 		glm::float32(3.0));
+	*/
 
 	/**********************************************************************/
 	//render pure color objects- lights
@@ -184,7 +208,7 @@ void ShadowMapGL::renderPureObject(
 }
 
 
-// generate shadow map // TODO
+// generate shadow map
 void ShadowMapGL::generateShadowMap(
 	GLuint& tex,
 	const std::vector<shared_ptr<OGLF::Model>>& models,
@@ -224,6 +248,60 @@ void ShadowMapGL::generateShadowMap(
 		glCullFace(GL_BACK);
 	}
 }
+
+// generate shadow map with marching cubes model
+void ShadowMapGL::generateShadowMapWithMCModel(
+	GLuint& tex,
+	const std::vector<shared_ptr<OGLF::Model>>& models,
+	const std::vector<glm::mat4>& model_trans,
+	const glm::mat4& marchingCubes_model_mat,
+	const glm::mat4& depth_vp,
+	uint width, uint height) {
+
+	// render depth texture
+	glUseProgram(m_render_shadow_tex_program);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, m_framebuffer);
+	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+		GL_TEXTURE_2D, tex, 0);
+	glDrawBuffer(GL_NONE); // No color buffer is drawn to.
+						   //glReadBuffer(GL_NONE);
+						   // Always check that our framebuffer is ok
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		return;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, m_framebuffer);
+	glViewport(0, 0, width, height);
+	glClearDepth(1.0);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	glUniformMatrix4fv(
+		glGetUniformLocation(m_render_shadow_tex_program, "depthMVP"),
+		1, false, glm::value_ptr(depth_vp));
+
+	// cull opposite direction, since we're doing shadows
+	glCullFace(GL_FRONT);
+
+	// render assimp-loaded models
+	for (int i = 0; i < models.size(); i++) {
+		// Send our transformation to the currently bound shader,
+		glUniformMatrix4fv(
+			glGetUniformLocation(m_render_shadow_tex_program, "model"),
+			1, false, glm::value_ptr(model_trans[i]));
+
+		models[i]->Draw(m_render_shadow_tex_program);
+	}
+	// render marching cubes model
+	glUniformMatrix4fv(
+		glGetUniformLocation(m_render_shadow_tex_program, "model"),
+		1, false, glm::value_ptr(marchingCubes_model_mat));
+
+	marchingCubes_model->Draw(m_render_shadow_tex_program);
+
+	// face culling for regular rendering again
+	glCullFace(GL_BACK);
+}
+
 
 // initialize texture map for shadow map
 void ShadowMapGL::initShadowMapTex(GLuint& tex, uint width, uint height) {
@@ -321,6 +399,89 @@ void ShadowMapGL::renderPhongObject(
 	phong_model->Draw(m_model_program);
 	glUseProgram(0);
 }
+
+
+// render the marching cubes model using phong lighting
+void ShadowMapGL::renderPhongMCM(
+	glm::mat4& model_mat,
+	glm::vec3 && obj_Color,
+	glm::vec3 && uK,
+	glm::vec3 && uSpecularColor,
+	glm::float32 uShininess
+) {
+
+	glUseProgram(m_model_program);
+
+	glm::mat4 model_view_proj = m_proj * m_camera_view  * model_mat;
+	glm::mat4 normal_trans = glm::transpose(glm::inverse(model_mat));
+	// delivery transforms
+	glUniformMatrix4fv(
+		glGetUniformLocation(m_model_program, "model_view_proj"),
+		1, false, glm::value_ptr(model_view_proj));
+	glUniformMatrix4fv(
+		glGetUniformLocation(m_model_program, "model"),
+		1, false, glm::value_ptr(model_mat));
+	glUniformMatrix4fv(
+		glGetUniformLocation(m_model_program, "normal_trans"),
+		1, false, glm::value_ptr(normal_trans));
+	// for light
+	glUniformMatrix4fv(
+		glGetUniformLocation(m_model_program, "depthMVP"),
+		1, false, glm::value_ptr(depthMVP));
+
+	glUniform3fv(
+		glGetUniformLocation(m_model_program, "lightPosition"),
+		1, glm::value_ptr(light.pos));
+	glUniform1i(
+		glGetUniformLocation(m_model_program, "light_type"), //SPOT 0,POINT 1,DIRECTION 2
+		GLint(light.light_type));
+	glUniform3fv(
+		glGetUniformLocation(m_model_program, "lightColor"),
+		1, glm::value_ptr(light.color));
+
+	// for light2
+	glUniformMatrix4fv(
+		glGetUniformLocation(m_model_program, "depthMVP2"),
+		1, false, glm::value_ptr(depthMVP2));
+
+	glUniform3fv(
+		glGetUniformLocation(m_model_program, "lightPosition2"),
+		1, glm::value_ptr(light2.pos));
+	glUniform1i(
+		glGetUniformLocation(m_model_program, "light_type2"), //SPOT 0,POINT 1,DIRECTION 2
+		GLint(light2.light_type));
+	glUniform3fv(
+		glGetUniformLocation(m_model_program, "lightColor2"),
+		1, glm::value_ptr(light2.color));
+
+
+	glUniform3fv(
+		glGetUniformLocation(m_model_program, "uColor"),
+		1, glm::value_ptr(obj_Color));
+	glUniform3fv(
+		glGetUniformLocation(m_model_program, "uSpecularColor"),
+		1, glm::value_ptr(uSpecularColor));
+	glUniform3fv(
+		glGetUniformLocation(m_model_program, "uK"),
+		1, glm::value_ptr(uK));
+
+	glUniform1f(glGetUniformLocation(m_model_program, "uShininess"),
+		uShininess);
+
+	// Texture unit 0 is for shadowmap.
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_depth_tex);
+	glUniform1i(glGetUniformLocation(m_model_program, "shadowMap"), 0);
+
+	// Texture unit 1 is for shadowmap2.
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, m_depth_tex2);
+	glUniform1i(glGetUniformLocation(m_model_program, "shadowMap2"), 1);
+
+	marchingCubes_model->Draw(m_model_program);
+	glUseProgram(0);
+}
+
 
 void ShadowMapGL::keyPressEvent(QKeyEvent *event) {
 	// freeze/unfreeze render on press 'q'
