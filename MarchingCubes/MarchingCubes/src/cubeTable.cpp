@@ -175,7 +175,7 @@ void CubeTable::genTable3D(){
 			}
 			// extract corners of cube that coincide on current face
 			if(faceIdxInCube&1){ // is the face opposite the origin corner?
-				stateIdxOfFace = (getBit( stateIdxOfCube, 7-0 )) // TODO
+				stateIdxOfFace = (getBit( stateIdxOfCube, 7-0 ))
 							   + (getBit( stateIdxOfCube, 7-dimA )<<1)
 							   + (getBit( stateIdxOfCube, 7-dimB )<<2)
 							   + (getBit( stateIdxOfCube, 7-(dimA|dimB) )<<3);
@@ -399,7 +399,7 @@ char CubeTable::congruentEdge3D(char idx){
 
 	return otherIdx;
 }
-// convert mVertexIdx from face-based to universal cube coords // TODO
+// convert mVertexIdx from face-based to universal cube coords
 char CubeTable::faceCoordTo3DCoord(char idx){
 	/*
 	 * the index for an edge of a face in the cube,
@@ -559,7 +559,7 @@ char CubeTable::faceCoordTo3DCoord(char idx){
 }
 #endif
 
-// given a ring of mesh verts on a cube, interpolate them into a triangle mesh // TODO
+// given a ring of mesh verts on a cube, interpolate them into a triangle mesh
 void CubeTable::interpTris(int ringStart, int ringSize, char indicesByCube[], int& numIndices){
 	// connect all edges of the ring to the first vertex via triangles
 	// loop through all vertices in the ring, except the first (connecting point)...

@@ -94,7 +94,6 @@ void ShadowMapGL::OnUpdate() {
 	//glm::mat4 depthModelMatrix = glm::mat4(1.0);
 	depthMVP2 = depthProjectionMatrix2 * depthViewMatrix2;
 
-// TODO
 	std::vector<shared_ptr<OGLF::Model>> models;
 	std::vector<glm::mat4> model_trans;
 
