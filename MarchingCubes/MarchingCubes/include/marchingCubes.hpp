@@ -73,7 +73,7 @@ private:
 	char vertSizes[CELLNUM*CELLNUM*CELLNUM];
 	char indexSizes[CELLNUM*CELLNUM*CELLNUM];
 	// we need to keep a full table of indices as well, so we can eliminate duplicates
-	GLuint offsettedIndices[CELLNUM*CELLNUM*CELLNUM][12]; // TODO
+	GLuint offsettedIndices[CELLNUM*CELLNUM*CELLNUM][12];
 	char vertSums[CELLNUM*CELLNUM*CELLNUM];
 
 	// read from linear arrays with 3D coordinates

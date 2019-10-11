@@ -55,7 +55,7 @@ int swapAxisIdx(int idx, int axis1, int axis2){
 void MarchingCubes::genModel(){
 	cout<<"GENERATING MODEL WITH MARCHING CUBES ALGORITHM"<<endl;
 
-	// calculate all values that lie on grid points // TODO
+	// calculate all values that lie on grid points
 	implicitFormula(cellNum, frameSize, pts, norms);
 //syncThreads();
 	cout<<"\t--> field equation evaluated for all grid points"<<endl;
@@ -201,7 +201,7 @@ void MarchingCubes::pushIdxWithoutDups(int k, int j, int i, int idxNum){
 	// by the way: the focus voxel could've not changed, so we might be in the same voxel!
 	for(int subIdxNum=0; subIdxNum<indexSizes[coord(nk,nj,ni)]; subIdxNum++){
 		// if we find a match, use that as the index to push on
-		if( vertsTmp_byIdx(nk,nj,ni,subIdxNum) == focusVert ){ // TODO
+		if( vertsTmp_byIdx(nk,nj,ni,subIdxNum) == focusVert ){
 			// if we are still in the original voxel, did we reach the focus index?
 			// in that case, stop the loop and go straight to the non-duplicate section
 			if( !inNewVoxel && subIdxNum==idxNum ) break;
@@ -225,8 +225,7 @@ void MarchingCubes::pushIdxWithoutDups(int k, int j, int i, int idxNum){
 	pushGlobalCoordinatesVertex(k,j,i,focusVert);
 }
 
-// push a new vertex onto the verts vector, first converting it to global space coordinates! // TODO
-// ADD NORMALS
+// push a new vertex onto the verts vector, first converting it to global space coordinates!
 void MarchingCubes::pushGlobalCoordinatesVertex(int k, int j, int i, int idx){
 	float stepLength = 2*frameSize/cellNum;
 
@@ -266,7 +265,7 @@ void MarchingCubes::pushGlobalCoordinatesVertex(int k, int j, int i, int idx){
 	Vertex newVert;
 	newVert.position_ = globalCoords + ptInterpolated;
 	newVert.normal_ = normInterpolated;
-	newVert.texcoords_ = vec2(0.f); // TODO
+	newVert.texcoords_ = vec2(0.f);
 	verts.push_back(newVert);
 }
 
@@ -381,7 +380,7 @@ void MarchingCubes::setupGL(){
 	// copy indices into our freshly baked element buffer
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), &indices[0], GL_STATIC_DRAW);
 
-// set up buffers available to the vertex shader // TODO
+// set up buffers available to the vertex shader
 // glVertexAttribPointer( layout_location_#, buffer_element_size, type, normalized, stride, array_buffer_offset );
 	// position
 	glEnableVertexAttribArray(0);
@@ -400,7 +399,7 @@ void MarchingCubes::Draw(GLuint program){
 	// setup materials
 	GLuint diffuse_count = 1;
 	GLuint specular_count = 1;
-	// attach all textures associated with the mesh // TODO
+	// attach all textures associated with the mesh
 	/*
 	for (GLuint i = 0; i < textures_.size(); i++) {
 		glActiveTexture(GL_TEXTURE0 + i);
