@@ -24,7 +24,8 @@ class QtWrapper : public QMainWindow {
 	Q_OBJECT
 
 public:
-	QtWrapper(QWidget *parent = Q_NULLPTR);
+	explicit QtWrapper(float frameSize, QWidget *parent = Q_NULLPTR);
+	explicit QtWrapper(QWidget *parent = Q_NULLPTR);
 
 public:
 	// ShadowMapGL is a child of OGLFramework, which is a child of QGLWidget
@@ -32,6 +33,8 @@ public:
 	//  └──OGLF::OGLFramework
 	//            └──ShadowMapGL
 	ShadowMapGL* Fw;
+	MarchingCubes* MCModel;
+	CubeTable* MCModel_table;
 
 private:
 	Ui::QtWrapperClass ui;
