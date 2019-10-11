@@ -96,7 +96,7 @@ Mesh Model::ProcMesh(aiMesh* mesh, const aiScene* scene) {
 			indices.push_back(face.mIndices[j]);
 	}
 
-	// process material // TODO
+	// process material
 	if (mesh->mMaterialIndex >= 0) {
 		// material stores whichever scene material was selected for this mesh
 		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
