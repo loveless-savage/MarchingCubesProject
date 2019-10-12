@@ -64,7 +64,7 @@ void MarchingCubes::genModel(){
 	for(int k=0;k<cellNum;k++){
 	for(int j=0;j<cellNum;j++){
 	for(int i=0;i<cellNum;i++){
-		// first figure out what our index is based on current grid cell
+		// first find our index that describes our voxel's pass/fail permutation
 		int idx = 0;
 		for(int bit=0;bit<POW2(DIMENSION);bit++){
 			idx |= pts
@@ -77,7 +77,7 @@ void MarchingCubes::genModel(){
 		// the leftmost bit of idx corresponds to the innermost corner of the grid cell
 
 		// in the arrays, k j and i coordinates are condensed into one coordinate
-		readLookupTable(idx, coord(k,j,i));
+		readLookupTable(idx, coord(k,j,i)); // TODO
 
 	}}} // gather pointers to the lookup table
 //syncThreads();
@@ -156,6 +156,98 @@ char MarchingCubes::vertsTmp_byIdx(int k, int j, int i, int idxNum){
 	return vertsTmp[coord(k,j,i)][ indicesTmp[coord(k,j,i)][idxNum] ];
 }
 
+
+//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
+// read from lookup table
+void MarchingCubes::readLookupTable(int idx, int coord) {
+#if REFLECTION_COMPRESSION
+	int tempIdx = idx;
+	// we want to find a failing corner, so if all corners in the grid cell pass we invert them
+	if (idx == POW2(POW2(DIMENSION)) - 1) tempIdx = 0;
+
+	// find the first failing corner
+	int bit = POW2(DIMENSION);
+	while (getBit(tempIdx, bit - 1)) bit--; // loop while the current corner is passing
+	bit--; // now bit holds the position of the first failing corner
+
+		   // here we reflect the grid cell until it puts the failing corner leftmost
+		   // for each 0 in the binary expansion of bit, invert the corresponding dimension
+	if (getBit(bit, 2) == 0) tempIdx = reflectIdx(tempIdx, 2);
+	if (getBit(bit, 1) == 0) tempIdx = reflectIdx(tempIdx, 1);
+	if (getBit(bit, 0) == 0) tempIdx = reflectIdx(tempIdx, 0);
+
+	// analyze corners adjacent to the failing corner
+	int idxPrefix = getBit(tempIdx, POW2(DIMENSION) - 1 - 1)
+		+ (getBit(tempIdx, POW2(DIMENSION) - 1 - 2) << 1)
+		+ (getBit(tempIdx, POW2(DIMENSION) - 1 - 4) << 2);
+
+	/* we have 4 cases for our adjacent corners:
+	* -> all the same (0's or 1's)
+	* -> just one corner passes (0100, 100, 0001...)
+	* -> two passing corners (1100, 101, 011...)
+	* -> three passing corners (0111, 1011...)
+	*     (not relevant in 3 dimensions)
+	* we can compress these cases to 2 bits...
+	* ... rather than the 4 or 5 necessary to store the states of leftmost & adjacent corners
+	* this significantly reduces the size of the lookup table!
+	*/
+	// calculate the case number
+	int caseNum = getBit(idxPrefix, 0)
+		+ getBit(idxPrefix, 1)
+		+ getBit(idxPrefix, 2);
+
+	// figure out what axes to swap
+	int axisBit = DIMENSION, axisOther = 0;
+	int axisBit2 = 0, axisOther2 = 0; // if there are two swaps- might not happen
+	switch (caseNum) {
+	case 2: // put two passing corners in the x & y dimensions
+			// we are doing two flips! use axisBit2
+		axisBit2 = DIMENSION;
+		// find the first passing corner
+		while (getBit(idxPrefix, axisBit2 - 1) == 0) axisBit2--;
+		axisBit2--;
+		// is it already partially ordered? if so, skip rightmost bit
+		if (getBit(idxPrefix, 0)) {
+			axisOther2 = 1;
+			axisOther = 1;
+		}
+		// swap first pair of axes!
+		swapAxisIdx(tempIdx, axisBit2, axisOther2);
+
+		// find the second failing corner- might be swapped to the same position!
+		while (getBit(idxPrefix, axisBit - 1) == 0) axisBit--;
+		axisBit--;
+		// second swap is done outside the switch statement
+		break;
+
+	case 1: // put the passing corner in the x dimension
+			// find the single passing corner
+		while (getBit(idxPrefix, axisBit - 1) == 0) axisBit--;
+		axisBit--;
+		// swap the appropriate corner with the x axis corner
+		axisOther = 0;
+		break;
+
+	default: // all 0's or all 1's
+		axisBit = 0; // axes are the same, so nothing will happen
+		break;
+	}
+	swapAxisIdx(tempIdx, axisBit, axisOther);
+	// now that we have rotated our cube, we can actually read from the lookup table!
+#endif // #if REFLECTION_COMPRESSION
+	//lookupTable->diag(idx);
+
+	// make the focus element of vertsTmp[] point to the correct entry of the lookup table
+	vertsTmp[coord] = lookupTable->getVertexArray(idx);
+	// same with indicesTmp
+	indicesTmp[coord] = lookupTable->getIndexArray(idx);
+
+	// we also want to remember the sizes of each array, since they vary
+	vertSizes[coord] = lookupTable->getNumVerts(idx);
+	indexSizes[coord] = lookupTable->getNumIndices(idx);
+}
+
+// ISSUE SOMEWHERE IN MarchingCubes::pushIdxWithoutDups(k,j,i,idxNum)?
 // push a new index onto the indices vector, unless it is a duplicate
 void MarchingCubes::pushIdxWithoutDups(int k, int j, int i, int idxNum){
 	// first capture the ID of the focus vertex
@@ -167,7 +259,7 @@ void MarchingCubes::pushIdxWithoutDups(int k, int j, int i, int idxNum){
 	 * we always want to check for the vertex's occurence in the earliest processed voxel of the four
 	 * so we go through each coordinate {k j i} and evaluate whether to subtract 1
 	 * we won't if the focus voxel is on the border!
-	 * we also don't subtract one from the coordinate parallel to the focus grid edge
+	 * we also don't subtract one from the coordinate that's parallel to the focus grid edge
 	 * if we can switch to an adjacent voxel, then because it shares a cube edge,
 	 * there geometrically MUST be a duplicate of our focus vertex in that voxel
 	 */
@@ -215,6 +307,7 @@ void MarchingCubes::pushIdxWithoutDups(int k, int j, int i, int idxNum){
 			// and we don't have to push the vertex onto the master vertex buffer; it's already in there!
 		}
 	}
+	
 
 	// if we reach this point, there were no duplicates of this vertex in the entire model up to now
 	indices.push_back( GLuint(verts.size()) );
@@ -227,6 +320,7 @@ void MarchingCubes::pushIdxWithoutDups(int k, int j, int i, int idxNum){
 
 // push a new vertex onto the verts vector, first converting it to global space coordinates!
 void MarchingCubes::pushGlobalCoordinatesVertex(int k, int j, int i, int idx){
+	// width of a voxel
 	float stepLength = 2*frameSize/cellNum;
 
 	// convert the points of the coincident grid edge into vectors
@@ -244,10 +338,11 @@ void MarchingCubes::pushGlobalCoordinatesVertex(int k, int j, int i, int idx){
 	float scalar1 = pts[k+int(pt1.z)][j+int(pt1.y)][i+int(pt1.x)].w;
 	float scalar2 = pts[k+int(pt2.z)][j+int(pt2.y)][i+int(pt2.x)].w;
 	float offsetFraction = ( 0.f-scalar1 )/( scalar2-scalar1 );
+	offsetFraction = 0.5; // TODO
 
 	// interpolate position in space based on scalar values
 	vec3 ptInterpolated = pt2-pt1;
-	ptInterpolated *= offsetFraction*stepLength;
+	ptInterpolated *= stepLength * offsetFraction;
 
 	// interpolate normals
 	vec3 norm1 = norms[k+int(pt1.z)][j+int(pt1.y)][i+int(pt1.x)];
@@ -267,97 +362,6 @@ void MarchingCubes::pushGlobalCoordinatesVertex(int k, int j, int i, int idx){
 	newVert.normal_ = normInterpolated;
 	newVert.texcoords_ = vec2(0.f);
 	verts.push_back(newVert);
-}
-
-
-//@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//
-// read from lookup table
-void MarchingCubes::readLookupTable(int idx, int coord){
-#if REFLECTION_COMPRESSION
-	int tempIdx = idx;
-	// we want to find a failing corner, so if all corners in the grid cell pass we invert them
-	if(idx == POW2(POW2(DIMENSION))-1) tempIdx=0;
-
-	// find the first failing corner
-	int bit = POW2(DIMENSION);
-	while(getBit(tempIdx,bit-1)) bit--; // loop while the current corner is passing
-	bit--; // now bit holds the position of the first failing corner
-
-	// here we reflect the grid cell until it puts the failing corner leftmost
-	// for each 0 in the binary expansion of bit, invert the corresponding dimension
-	if(getBit(bit,2)==0) tempIdx=reflectIdx(tempIdx,2);
-	if(getBit(bit,1)==0) tempIdx=reflectIdx(tempIdx,1);
-	if(getBit(bit,0)==0) tempIdx=reflectIdx(tempIdx,0);
-
-	// analyze corners adjacent to the failing corner
-	int idxPrefix = getBit(tempIdx,POW2(DIMENSION)-1-1)
-				  + (getBit(tempIdx,POW2(DIMENSION)-1-2)<<1)
-				  + (getBit(tempIdx,POW2(DIMENSION)-1-4)<<2);
-	
-	/* we have 4 cases for our adjacent corners:
-	 * -> all the same (0's or 1's)
-	 * -> just one corner passes (0100, 100, 0001...)
-	 * -> two passing corners (1100, 101, 011...)
-	 * -> three passing corners (0111, 1011...)
-	 *     (not relevant in 3 dimensions)
-	 * we can compress these cases to 2 bits...
-	 * ... rather than the 4 or 5 necessary to store the states of leftmost & adjacent corners
-	 * this significantly reduces the size of the lookup table!
-	*/
-	// calculate the case number
-	int caseNum = getBit(idxPrefix,0)
-				+ getBit(idxPrefix,1)
-				+ getBit(idxPrefix,2);
-
-	// figure out what axes to swap
-	int axisBit=DIMENSION,axisOther=0;
-	int axisBit2=0,axisOther2=0; // if there are two swaps- might not happen
-	switch(caseNum){
-		case 2: // put two passing corners in the x & y dimensions
-			// we are doing two flips! use axisBit2
-			axisBit2=DIMENSION;
-			// find the first passing corner
-			while(getBit(idxPrefix,axisBit2-1)==0) axisBit2--;
-			axisBit2--;
-			// is it already partially ordered? if so, skip rightmost bit
-			if(getBit(idxPrefix,0)){
-				axisOther2=1;
-				axisOther=1;
-			}
-			// swap first pair of axes!
-			swapAxisIdx(tempIdx,axisBit2,axisOther2);
-
-			// find the second failing corner- might be swapped to the same position!
-			while(getBit(idxPrefix,axisBit-1)==0) axisBit--;
-			axisBit--;
-			// second swap is done outside the switch statement
-			break;
-
-		case 1: // put the passing corner in the x dimension
-			// find the single passing corner
-			while(getBit(idxPrefix,axisBit-1)==0) axisBit--;
-			axisBit--;
-			// swap the appropriate corner with the x axis corner
-			axisOther=0;
-			break;
-
-		default: // all 0's or all 1's
-			axisBit=0; // axes are the same, so nothing will happen
-			break;
-	}
-	swapAxisIdx(tempIdx,axisBit,axisOther);
-	// now that we have rotated our cube, we can actually read from the lookup table!
-#endif // #if REFLECTION_COMPRESSION
-	//lookupTable->diag(idx);
-
-	// make the focus element of vertsTmp[] point to the correct entry of the lookup table
-	vertsTmp[coord] = lookupTable->getVertexArray(idx);
-	// same with indicesTmp
-	indicesTmp[coord] = lookupTable->getIndexArray(idx);
-
-	// we also want to remember the sizes of each array, since they vary
-	vertSizes[coord] = lookupTable->getNumVerts(idx);
-	indexSizes[coord] = lookupTable->getNumIndices(idx);
 }
 
 //@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@//

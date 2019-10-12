@@ -12,6 +12,7 @@
 #include <vector>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 #include "cellNum.hpp"
 #include "cubeTable.hpp"
