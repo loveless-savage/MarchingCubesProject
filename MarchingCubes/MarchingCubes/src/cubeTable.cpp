@@ -158,13 +158,13 @@ void CubeTable::genTable3D(){
 		/* each 2D face of the cube has an index associated:
 		 * faceIdxInCube = 0b011
 		 *  where these two  ^^  bits store the normal axis: 00=x,01=y,10=z
-		 *  ...and this bit    ^ stores if the face is next to root corner: 0=yes,1=no
+		 *  ...and this bit    ^ stores if the face is next to the 0 pole: 0=yes,1=no
 		 * when identifying a mesh vertex in a grid cube:
 		 * mVertexIdxInCube = faceIdxInCube<<4 + mVertexIdxInFace;
 		 * (example)      = 0b0_011_1101
 		 */
 		//cout<<"\n\t\t faces: ";
-		for(int faceIdxInCube=0; faceIdxInCube<0b110; faceIdxInCube++){
+		for(int faceIdxInCube=0; faceIdxInCube<6; faceIdxInCube++){
 			//cout<<faceIdxInCube;
 			// which dimensions do we use for the current face?
 			int dimA, dimB;

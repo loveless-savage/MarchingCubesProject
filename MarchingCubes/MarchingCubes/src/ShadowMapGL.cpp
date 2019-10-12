@@ -98,12 +98,12 @@ void ShadowMapGL::OnUpdate() {
 	std::vector<glm::mat4> model_trans;
 
 	// pop models onto the model "stack"
-	models.push_back(m_dragon_model);
+	//models.push_back(m_dragon_model);
 	// dragon  	
 	glm::mat4 dragon_model_mat = m_model_trans * glm::scale(vec3(0.02));
 
 	// pop model matrices onto the model matrix "stack"
-	model_trans.push_back(dragon_model_mat);
+	//model_trans.push_back(dragon_model_mat);
 
 	// marching cubes model matrix
 	glm::mat4 marchingCubes_model_mat = m_model_trans * marchingCubes_model->frameScaleMatrix();

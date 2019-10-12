@@ -2,7 +2,8 @@
 
 // change the equation here! the test compares this scalar value to zero
 float scalarEquation( vec3 input ){
-	return sin(input.x)+sin(input.y)+sin(input.z);
+	return input.x*input.x + input.y*input.y + input.z*input.z - 16.f; // sphere
+	//return sin(input.x)+sin(input.y)+sin(input.z); // sponge
 }
 
 void implicitFormula(int cellNum, float frameSize, vec4 pts[CELLNUM+1][CELLNUM+1][CELLNUM+1], vec3 norms[CELLNUM+1][CELLNUM+1][CELLNUM+1]){
